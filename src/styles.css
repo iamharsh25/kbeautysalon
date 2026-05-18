@@ -167,29 +167,29 @@ textarea {
 }
 
 .hero {
-  background: linear-gradient(180deg, var(--green) 0%, #b8ccc3 62%, var(--cream) 100%);
   color: var(--white);
   min-height: calc(100svh - 78px);
   overflow: hidden;
-  padding: clamp(42px, 8vw, 88px) 20px 80px;
   position: relative;
 }
 
-.hero-media {
-  border: 4px solid var(--gold);
-  box-shadow: var(--shadow);
-  margin: 0 auto;
-  max-width: 760px;
-  min-height: clamp(280px, 46vw, 430px);
-  position: relative;
-}
-
-.hero-image {
-  background:
-    linear-gradient(rgba(38, 52, 47, 0.38), rgba(38, 52, 47, 0.42)),
-    url("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1500&q=85") center/cover;
+.hero-carousel,
+.hero-slide {
   inset: 0;
   position: absolute;
+}
+
+.hero-slide {
+  background-position: center;
+  background-size: cover;
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity 900ms ease, transform 1400ms ease;
+}
+
+.hero-slide.active {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .hero-overlay {
@@ -201,6 +201,7 @@ textarea {
   padding: 24px;
   position: absolute;
   text-align: center;
+  z-index: 1;
 }
 
 .hero-overlay p,
@@ -231,7 +232,7 @@ textarea {
   display: flex;
   gap: 22px;
   justify-content: center;
-  margin-top: 24px;
+  margin-top: 30px;
 }
 
 .primary-button,
@@ -262,26 +263,34 @@ textarea {
 }
 
 .secondary-link {
-  border-bottom: 1px solid currentColor;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  display: inline-flex;
   font-weight: 700;
+  justify-content: center;
+  min-height: 50px;
+  padding: 0 28px;
 }
 
-.hero-lines {
-  border-left: 2px solid var(--gold);
-  border-right: 2px solid var(--gold);
-  height: 360px;
-  opacity: 0.82;
-  position: absolute;
-  top: 80px;
-  width: 26px;
+.hero-dots {
+  display: flex;
+  gap: 10px;
+  margin-top: 28px;
 }
 
-.hero-lines-left {
-  left: 9vw;
+.hero-dots button {
+  background: rgba(255, 255, 255, 0.48);
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  height: 9px;
+  padding: 0;
+  width: 28px;
 }
 
-.hero-lines-right {
-  right: 9vw;
+.hero-dots button.active {
+  background: var(--gold-light);
 }
 
 .section {
@@ -924,12 +933,7 @@ textarea {
   }
 
   .hero {
-    min-height: auto;
-    padding-top: 32px;
-  }
-
-  .hero-media {
-    min-height: 380px;
+    min-height: calc(100svh - 78px);
   }
 
   .hero-actions,
@@ -950,10 +954,6 @@ textarea {
     min-height: 50px;
     padding: 14px 20px;
     text-align: center;
-  }
-
-  .hero-lines {
-    display: none;
   }
 
   .service-grid,

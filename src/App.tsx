@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import {
   ArrowRight,
   CalendarDays,
@@ -232,29 +232,56 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
 }
 
 function Hero({ heroImage }: { heroImage: string }) {
+  const carouselImages = [
+    heroImage,
+    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1800&q=85',
+  ];
+  const [activeImage, setActiveImage] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveImage((currentImage) => (currentImage + 1) % carouselImages.length);
+    }, 4500);
+
+    return () => window.clearInterval(timer);
+  }, [carouselImages.length]);
+
   return (
     <section className="hero" id="home">
-      <div className="hero-lines hero-lines-left" aria-hidden="true" />
-      <div className="hero-lines hero-lines-right" aria-hidden="true" />
-      <div className="hero-media">
-        <div
-          className="hero-image"
-          role="img"
-          aria-label="A calm salon appointment in progress"
-          style={{ backgroundImage: `linear-gradient(rgba(38, 52, 47, 0.38), rgba(38, 52, 47, 0.42)), url("${heroImage}")` }}
-        />
-        <div className="hero-overlay">
-          <p>Beauty Studio</p>
-          <h1>KBeauty Salon</h1>
-          <span>Hair . Beauty . Nails</span>
-        </div>
+      <div className="hero-carousel" aria-label="Salon image carousel">
+        {carouselImages.map((image, index) => (
+          <div
+            className={activeImage === index ? 'hero-slide active' : 'hero-slide'}
+            key={image}
+            role="img"
+            aria-label="A calm salon appointment in progress"
+            style={{ backgroundImage: `linear-gradient(rgba(35, 51, 45, 0.4), rgba(35, 51, 45, 0.48)), url("${image}")` }}
+          />
+        ))}
       </div>
-      <div className="hero-actions">
-        <a className="primary-button" href="#booking">
-          Book Appointment
-          <ArrowRight size={18} />
-        </a>
-        <a className="secondary-link" href="#services">View Services</a>
+      <div className="hero-overlay">
+        <p>Beauty Studio</p>
+        <h1>KBeauty Salon</h1>
+        <span>Hair . Beauty . Nails</span>
+        <div className="hero-actions">
+          <a className="primary-button" href="#booking">
+            Book Appointment
+            <ArrowRight size={18} />
+          </a>
+          <a className="secondary-link" href="#services">Services</a>
+        </div>
+        <div className="hero-dots" aria-label="Carousel slide controls">
+          {carouselImages.map((image, index) => (
+            <button
+              aria-label={`Show slide ${index + 1}`}
+              className={activeImage === index ? 'active' : ''}
+              key={`${image}-dot`}
+              type="button"
+              onClick={() => setActiveImage(index)}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
