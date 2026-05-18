@@ -167,7 +167,7 @@ const initialVouchers: Voucher[] = [
 ];
 
 const initialSettings: SiteSettings = {
-  heroImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1500&q=85',
+  heroImage: '/homepage/salon.jpg',
   instagramUrl: 'https://www.instagram.com/',
   phone: '04XX XXX XXX',
   email: 'hello@kbeautysalon.com',
@@ -234,8 +234,9 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
 function Hero({ heroImage }: { heroImage: string }) {
   const carouselImages = [
     heroImage,
-    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1800&q=85',
-    'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1800&q=85',
+    '/homepage/salon_1.jpg',
+    '/homepage/salon_2.jpg',
+    '/homepage/salon_3.jpg',
   ];
   const [activeImage, setActiveImage] = useState(0);
 
