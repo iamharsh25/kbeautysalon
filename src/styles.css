@@ -97,14 +97,26 @@ textarea {
   gap: clamp(14px, 2vw, 28px);
 }
 
-.desktop-nav a {
+.desktop-nav a,
+.nav-login-button {
   border-bottom: 1px solid transparent;
   padding-block: 8px;
 }
 
 .desktop-nav a:hover,
-.desktop-nav a:focus-visible {
+.desktop-nav a:focus-visible,
+.nav-login-button:hover,
+.nav-login-button:focus-visible {
   border-color: var(--gold-light);
+}
+
+.nav-login-button,
+.mobile-login-button {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .icon-button {
@@ -136,16 +148,21 @@ textarea {
   top: 100%;
 }
 
-.mobile-nav a {
+.mobile-nav a,
+.mobile-login-button {
   border-radius: 8px;
   color: var(--white);
   display: block;
   font-weight: 800;
   padding: 14px 12px;
+  text-align: left;
+  width: 100%;
 }
 
 .mobile-nav a:hover,
-.mobile-nav a:focus-visible {
+.mobile-nav a:focus-visible,
+.mobile-login-button:hover,
+.mobile-login-button:focus-visible {
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -519,13 +536,18 @@ textarea {
   gap: 4px;
 }
 
-.admin-login-section,
-.admin-shell {
-  background: #f2eee4;
-  padding: clamp(70px, 9vw, 118px) clamp(20px, 5vw, 72px);
+.modal-backdrop {
+  align-items: center;
+  background: rgba(47, 92, 80, 0.58);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 50;
 }
 
-.admin-login-card,
+.login-modal,
 .admin-panel,
 .admin-stat {
   background: var(--white);
@@ -534,17 +556,35 @@ textarea {
   box-shadow: var(--shadow);
 }
 
-.admin-login-card {
+.login-modal {
   color: var(--green-dark);
   display: grid;
   gap: 16px;
-  margin: 0 auto;
   max-width: 460px;
   padding: clamp(24px, 5vw, 42px);
+  position: relative;
+  width: min(100%, 460px);
 }
 
-.admin-login-card p,
-.admin-header p {
+.modal-close {
+  align-items: center;
+  background: #f2eee4;
+  border: 0;
+  border-radius: 999px;
+  color: var(--green-dark);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1.6rem;
+  height: 38px;
+  justify-content: center;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 38px;
+}
+
+.login-modal p,
+.admin-topbar p {
   color: var(--gold);
   font-size: 0.78rem;
   font-weight: 800;
@@ -553,8 +593,8 @@ textarea {
   text-transform: uppercase;
 }
 
-.admin-login-card h2,
-.admin-header h2 {
+.login-modal h2,
+.admin-topbar h1 {
   color: var(--ink);
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(2rem, 4vw, 3.3rem);
@@ -563,7 +603,7 @@ textarea {
   margin: 0;
 }
 
-.admin-login-card label,
+.login-modal label,
 .admin-field {
   color: var(--ink);
   display: grid;
@@ -572,7 +612,7 @@ textarea {
   gap: 8px;
 }
 
-.admin-login-card input,
+.login-modal input,
 .admin-field input,
 .admin-field textarea,
 .admin-row select {
@@ -585,25 +625,102 @@ textarea {
   width: 100%;
 }
 
+.login-error {
+  color: #a33b2f;
+  font-weight: 800;
+}
+
 .admin-field textarea {
   min-height: 88px;
   padding-block: 12px;
   resize: vertical;
 }
 
-.admin-login-card > span {
+.login-modal > span {
   color: var(--muted);
   font-size: 0.86rem;
   line-height: 1.6;
 }
 
-.admin-header {
+.admin-page {
+  background: #f2eee4;
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  min-height: 100svh;
+}
+
+.admin-sidebar {
+  background: var(--green-dark);
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px;
+}
+
+.admin-sidebar-brand {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.admin-sidebar-brand strong,
+.admin-sidebar-brand span {
+  display: block;
+}
+
+.admin-sidebar-brand span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.84rem;
+  margin-top: 3px;
+}
+
+.admin-sidebar nav {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-sidebar nav button,
+.admin-logout-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+  justify-content: flex-start;
+  min-height: 46px;
+  padding: 0 12px;
+  text-align: left;
+}
+
+.admin-sidebar nav button:hover,
+.admin-sidebar nav button:focus-visible,
+.admin-sidebar nav button.active {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(231, 201, 156, 0.38);
+  color: var(--white);
+}
+
+.admin-logout-button {
+  border-color: rgba(231, 201, 156, 0.48);
+  color: var(--gold-light);
+  margin-top: auto;
+}
+
+.admin-content {
+  padding: clamp(22px, 4vw, 46px);
+}
+
+.admin-topbar {
   align-items: center;
   display: flex;
   gap: 20px;
   justify-content: space-between;
-  margin: 0 auto 28px;
-  max-width: 1180px;
+  margin: 0 0 24px;
 }
 
 .outline-admin-button {
@@ -616,40 +733,15 @@ textarea {
   padding: 0 18px;
 }
 
-.admin-stats {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0 auto 22px;
-  max-width: 1180px;
-}
-
-.admin-stat {
-  align-items: center;
-  color: var(--green-dark);
-  display: grid;
-  gap: 4px;
-  padding: 20px;
-}
-
-.admin-stat span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.admin-stat strong {
-  color: var(--ink);
-  font-size: 2rem;
-}
-
 .admin-grid {
   display: grid;
   gap: 20px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0 auto;
-  max-width: 1180px;
+  max-width: 1040px;
+}
+
+.admin-grid.single {
+  grid-template-columns: minmax(0, 760px);
 }
 
 .admin-panel {
@@ -738,6 +830,32 @@ textarea {
   width: 18px;
 }
 
+.small-admin-button,
+.danger-admin-button {
+  align-items: center;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  width: fit-content;
+}
+
+.small-admin-button {
+  background: var(--green-dark);
+  border: 0;
+  color: var(--white);
+}
+
+.danger-admin-button {
+  background: transparent;
+  border: 1px solid #b95b4f;
+  color: #9d4238;
+}
+
 @media (max-width: 980px) {
   .desktop-nav {
     display: none;
@@ -756,8 +874,16 @@ textarea {
   .booking-section,
   .contact-band,
   .admin-grid,
-  .admin-stats {
+  .admin-grid.single {
     grid-template-columns: 1fr;
+  }
+
+  .admin-page {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    position: static;
   }
 
   .review-grid {
@@ -781,7 +907,7 @@ textarea {
     justify-self: center;
   }
 
-  .admin-header {
+  .admin-topbar {
     align-items: stretch;
     flex-direction: column;
     text-align: center;

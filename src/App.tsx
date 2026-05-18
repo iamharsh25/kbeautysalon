@@ -3,16 +3,20 @@ import {
   ArrowRight,
   CalendarDays,
   Clock,
+  Gift,
+  Home,
   Image,
   Instagram,
   LayoutDashboard,
   Mail,
   Menu,
   MessageSquare,
-  Phone,
+  Plus,
+  Settings,
   ShieldCheck,
   Sparkles,
   Star,
+  Trash2,
   UserRound,
 } from 'lucide-react';
 
@@ -50,6 +54,13 @@ type Review = {
   isVisible: boolean;
 };
 
+type Voucher = {
+  code: string;
+  description: string;
+  value: string;
+  status: string;
+};
+
 type SiteSettings = {
   heroImage: string;
   instagramUrl: string;
@@ -57,6 +68,16 @@ type SiteSettings = {
   email: string;
   address: string;
 };
+
+type AdminSection =
+  | 'home-page'
+  | 'new-leads'
+  | 'bookings'
+  | 'gallery'
+  | 'website-details'
+  | 'services'
+  | 'reviews'
+  | 'vouchers';
 
 const navItems = ['Home', 'About Us', 'Services', 'Gallery', 'Contact Us'];
 
@@ -140,6 +161,11 @@ const initialReviews: Review[] = [
   },
 ];
 
+const initialVouchers: Voucher[] = [
+  { code: 'WELCOME10', description: 'Introductory discount for new clients', value: '10%', status: 'Active' },
+  { code: 'GIFT50', description: 'Gift voucher credit', value: '$50', status: 'Draft' },
+];
+
 const initialSettings: SiteSettings = {
   heroImage: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1500&q=85',
   instagramUrl: 'https://www.instagram.com/',
@@ -148,7 +174,7 @@ const initialSettings: SiteSettings = {
   address: 'Your salon address will go here once confirmed.',
 };
 
-function Header() {
+function Header({ onLoginClick }: { onLoginClick: () => void }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -165,7 +191,7 @@ function Header() {
           </a>
         ))}
         <a href="#booking">Book Now</a>
-        <a href="#admin">Admin Login</a>
+        <button className="nav-login-button" type="button" onClick={onLoginClick}>Login</button>
       </nav>
 
       <button
@@ -180,15 +206,25 @@ function Header() {
 
       {isMenuOpen ? (
         <nav className="mobile-nav" aria-label="Mobile navigation">
-          {[...navItems, 'Book Now', 'Admin Login'].map((item) => (
+          {[...navItems, 'Book Now'].map((item) => (
             <a
               key={item}
-              href={item === 'Book Now' ? '#booking' : item === 'Admin Login' ? '#admin' : `#${item.toLowerCase().replaceAll(' ', '-')}`}
+              href={item === 'Book Now' ? '#booking' : `#${item.toLowerCase().replaceAll(' ', '-')}`}
               onClick={() => setIsMenuOpen(false)}
             >
               {item}
             </a>
           ))}
+          <button
+            className="mobile-login-button"
+            type="button"
+            onClick={() => {
+              setIsMenuOpen(false);
+              onLoginClick();
+            }}
+          >
+            Login
+          </button>
         </nav>
       ) : null}
     </header>
@@ -386,17 +422,55 @@ function ContactBand({ settings }: { settings: SiteSettings }) {
 }
 
 export function App() {
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [view, setView] = useState<'public' | 'admin'>('public');
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const [services, setServices] = useState(initialServices);
   const [galleryImages, setGalleryImages] = useState(initialGalleryImages);
   const [bookings, setBookings] = useState(initialBookings);
   const [leads, setLeads] = useState(initialLeads);
   const [reviews, setReviews] = useState(initialReviews);
+  const [vouchers, setVouchers] = useState(initialVouchers);
   const [settings, setSettings] = useState(initialSettings);
+
+  function handleLogin(email: string, password: string) {
+    if (email.toLowerCase() === 'admin@kbeautysalon.com' && password === 'preview123') {
+      setView('admin');
+      setIsLoginOpen(false);
+      setLoginError('');
+      return;
+    }
+
+    setView('public');
+    setIsLoginOpen(false);
+    setLoginError('');
+  }
+
+  if (view === 'admin') {
+    return (
+      <AdminDashboard
+        bookings={bookings}
+        galleryImages={galleryImages}
+        leads={leads}
+        reviews={reviews}
+        services={services}
+        settings={settings}
+        vouchers={vouchers}
+        onBookingChange={setBookings}
+        onGalleryChange={setGalleryImages}
+        onLeadChange={setLeads}
+        onLogout={() => setView('public')}
+        onReviewChange={setReviews}
+        onServiceChange={setServices}
+        onSettingsChange={setSettings}
+        onVoucherChange={setVouchers}
+      />
+    );
+  }
 
   return (
     <>
-      <Header />
+      <Header onLoginClick={() => setIsLoginOpen(true)} />
       <main>
         <Hero heroImage={settings.heroImage} />
         <ServicesPreview services={services} />
@@ -404,251 +478,349 @@ export function App() {
         <BookingPreview />
         <ReviewsPreview reviews={reviews} />
         <GalleryPreview galleryImages={galleryImages} instagramUrl={settings.instagramUrl} />
-        <AdminPortal
-          bookings={bookings}
-          galleryImages={galleryImages}
-          isLoggedIn={isAdminLoggedIn}
-          leads={leads}
-          reviews={reviews}
-          services={services}
-          settings={settings}
-          onBookingChange={setBookings}
-          onGalleryChange={setGalleryImages}
-          onLeadChange={setLeads}
-          onLogin={() => setIsAdminLoggedIn(true)}
-          onLogout={() => setIsAdminLoggedIn(false)}
-          onReviewChange={setReviews}
-          onServiceChange={setServices}
-          onSettingsChange={setSettings}
-        />
       </main>
       <ContactBand settings={settings} />
+      {isLoginOpen ? (
+        <LoginModal
+          error={loginError}
+          onClose={() => {
+            setIsLoginOpen(false);
+            setLoginError('');
+          }}
+          onLogin={handleLogin}
+        />
+      ) : null}
     </>
   );
 }
 
-function AdminPortal({
+function LoginModal({
+  error,
+  onClose,
+  onLogin,
+}: {
+  error: string;
+  onClose: () => void;
+  onLogin: (email: string, password: string) => void;
+}) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    onLogin(String(formData.get('email')), String(formData.get('password')));
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <form className="login-modal" onSubmit={handleSubmit} aria-label="Login form">
+        <button className="modal-close" type="button" onClick={onClose} aria-label="Close login modal">
+          ×
+        </button>
+        <LayoutDashboard size={34} />
+        <p>Login</p>
+        <h2>Welcome back</h2>
+        <label>
+          Email
+          <input name="email" defaultValue="admin@kbeautysalon.com" type="email" />
+        </label>
+        <label>
+          Password
+          <input name="password" defaultValue="preview123" type="password" />
+        </label>
+        {error ? <span className="login-error">{error}</span> : null}
+        <button className="primary-button full-width" type="submit">
+          Login
+        </button>
+        <span>Preview admin: admin@kbeautysalon.com / preview123</span>
+      </form>
+    </div>
+  );
+}
+
+function AdminDashboard({
   bookings,
   galleryImages,
-  isLoggedIn,
   leads,
   reviews,
   services,
   settings,
+  vouchers,
   onBookingChange,
   onGalleryChange,
   onLeadChange,
-  onLogin,
   onLogout,
   onReviewChange,
   onServiceChange,
   onSettingsChange,
+  onVoucherChange,
 }: {
   bookings: Booking[];
   galleryImages: GalleryImage[];
-  isLoggedIn: boolean;
   leads: Lead[];
   reviews: Review[];
   services: Service[];
   settings: SiteSettings;
+  vouchers: Voucher[];
   onBookingChange: (bookings: Booking[]) => void;
   onGalleryChange: (galleryImages: GalleryImage[]) => void;
   onLeadChange: (leads: Lead[]) => void;
-  onLogin: () => void;
   onLogout: () => void;
   onReviewChange: (reviews: Review[]) => void;
   onServiceChange: (services: Service[]) => void;
   onSettingsChange: (settings: SiteSettings) => void;
+  onVoucherChange: (vouchers: Voucher[]) => void;
 }) {
-  if (!isLoggedIn) {
-    return <AdminLogin onLogin={onLogin} />;
-  }
+  const [activeSection, setActiveSection] = useState<AdminSection>('home-page');
+  const activeLabel = adminMenuItems.find((item) => item.id === activeSection)?.label ?? 'Admin';
 
   return (
-    <section className="admin-shell" id="admin">
-      <div className="admin-header">
-        <div>
-          <p>Client Admin</p>
-          <h2>Salon content dashboard</h2>
+    <div className="admin-page">
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-brand">
+          <span className="brand-mark">KB</span>
+          <div>
+            <strong>KBeauty Salon</strong>
+            <span>Admin Panel</span>
+          </div>
         </div>
-        <button className="outline-admin-button" type="button" onClick={onLogout}>
-          Log out
+        <nav aria-label="Admin navigation">
+          {adminMenuItems.map((item) => (
+            <button
+              className={activeSection === item.id ? 'active' : ''}
+              key={item.id}
+              type="button"
+              onClick={() => setActiveSection(item.id)}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <button className="admin-logout-button" type="button" onClick={onLogout}>
+          View Website
         </button>
-      </div>
+      </aside>
 
-      <div className="admin-stats">
-        <AdminStat icon={<CalendarDays size={20} />} label="Bookings" value={bookings.length.toString()} />
-        <AdminStat icon={<Mail size={20} />} label="Leads" value={leads.length.toString()} />
-        <AdminStat icon={<Star size={20} />} label="Reviews" value={reviews.length.toString()} />
-        <AdminStat icon={<Image size={20} />} label="Gallery" value={galleryImages.length.toString()} />
-      </div>
+      <section className="admin-content">
+        <div className="admin-topbar">
+          <div>
+            <p>Client Admin</p>
+            <h1>{activeLabel}</h1>
+          </div>
+          <button className="outline-admin-button" type="button" onClick={onLogout}>
+            Log out
+          </button>
+        </div>
 
-      <div className="admin-grid">
-        <AdminPanel icon={<Image size={20} />} title="Home page photo">
-          <AdminField label="Hero image URL">
-            <input
-              value={settings.heroImage}
-              onChange={(event) => onSettingsChange({ ...settings, heroImage: event.target.value })}
-            />
-          </AdminField>
-          <img className="admin-image-preview" src={settings.heroImage} alt="Current home page preview" />
-        </AdminPanel>
-
-        <AdminPanel icon={<Phone size={20} />} title="Salon contact details">
-          <AdminField label="Phone">
-            <input value={settings.phone} onChange={(event) => onSettingsChange({ ...settings, phone: event.target.value })} />
-          </AdminField>
-          <AdminField label="Email">
-            <input value={settings.email} onChange={(event) => onSettingsChange({ ...settings, email: event.target.value })} />
-          </AdminField>
-          <AdminField label="Address">
-            <textarea value={settings.address} onChange={(event) => onSettingsChange({ ...settings, address: event.target.value })} />
-          </AdminField>
-          <AdminField label="Instagram profile">
-            <input
-              value={settings.instagramUrl}
-              onChange={(event) => onSettingsChange({ ...settings, instagramUrl: event.target.value })}
-            />
-          </AdminField>
-        </AdminPanel>
-
-        <AdminPanel icon={<Sparkles size={20} />} title="Edit services">
-          {services.map((service, index) => (
-            <div className="admin-item" key={service.title}>
-              <AdminField label="Service name">
+        {activeSection === 'home-page' ? (
+          <div className="admin-grid single">
+            <AdminPanel icon={<Home size={20} />} title="Home page">
+              <AdminField label="Hero image URL">
                 <input
-                  value={service.title}
-                  onChange={(event) => updateListItem(services, index, { ...service, title: event.target.value }, onServiceChange)}
+                  value={settings.heroImage}
+                  onChange={(event) => onSettingsChange({ ...settings, heroImage: event.target.value })}
                 />
               </AdminField>
-              <AdminField label="Price">
-                <input
-                  value={service.price}
-                  onChange={(event) => updateListItem(services, index, { ...service, price: event.target.value }, onServiceChange)}
-                />
-              </AdminField>
-            </div>
-          ))}
-        </AdminPanel>
+              <img className="admin-image-preview" src={settings.heroImage} alt="Current home page preview" />
+            </AdminPanel>
+          </div>
+        ) : null}
 
-        <AdminPanel icon={<CalendarDays size={20} />} title="Manage bookings">
-          {bookings.map((booking, index) => (
-            <div className="admin-row" key={`${booking.client}-${booking.time}`}>
-              <div>
-                <strong>{booking.client}</strong>
-                <span>{booking.service} . {booking.time}</span>
+        {activeSection === 'new-leads' ? (
+          <AdminPanel icon={<MessageSquare size={20} />} title="New leads">
+            {leads.map((lead, index) => (
+              <div className="admin-row admin-row-stack" key={lead.email}>
+                <div>
+                  <strong>{lead.name}</strong>
+                  <span>{lead.email}</span>
+                  <p>{lead.message}</p>
+                </div>
+                <select
+                  value={lead.status}
+                  onChange={(event) => updateListItem(leads, index, { ...lead, status: event.target.value }, onLeadChange)}
+                >
+                  <option>New</option>
+                  <option>Read</option>
+                  <option>Closed</option>
+                </select>
               </div>
-              <select
-                value={booking.status}
-                onChange={(event) => updateListItem(bookings, index, { ...booking, status: event.target.value }, onBookingChange)}
-              >
-                <option>Pending</option>
-                <option>Confirmed</option>
-                <option>Completed</option>
-                <option>Cancelled</option>
-              </select>
-            </div>
-          ))}
-        </AdminPanel>
+            ))}
+          </AdminPanel>
+        ) : null}
 
-        <AdminPanel icon={<MessageSquare size={20} />} title="Leads">
-          {leads.map((lead, index) => (
-            <div className="admin-row admin-row-stack" key={lead.email}>
-              <div>
-                <strong>{lead.name}</strong>
-                <span>{lead.email}</span>
-                <p>{lead.message}</p>
+        {activeSection === 'bookings' ? (
+          <AdminPanel icon={<CalendarDays size={20} />} title="Bookings">
+            {bookings.map((booking, index) => (
+              <div className="admin-row" key={`${booking.client}-${booking.time}`}>
+                <div>
+                  <strong>{booking.client}</strong>
+                  <span>{booking.service} . {booking.time}</span>
+                </div>
+                <select
+                  value={booking.status}
+                  onChange={(event) => updateListItem(bookings, index, { ...booking, status: event.target.value }, onBookingChange)}
+                >
+                  <option>Pending</option>
+                  <option>Confirmed</option>
+                  <option>Completed</option>
+                  <option>Cancelled</option>
+                </select>
               </div>
-              <select
-                value={lead.status}
-                onChange={(event) => updateListItem(leads, index, { ...lead, status: event.target.value }, onLeadChange)}
-              >
-                <option>New</option>
-                <option>Read</option>
-                <option>Closed</option>
-              </select>
-            </div>
-          ))}
-        </AdminPanel>
+            ))}
+          </AdminPanel>
+        ) : null}
 
-        <AdminPanel icon={<Image size={20} />} title="Manage gallery">
-          {galleryImages.slice(0, 3).map((image, index) => (
-            <div className="admin-item" key={image.alt}>
-              <AdminField label="Image title">
-                <input
-                  value={image.title}
-                  onChange={(event) => updateListItem(galleryImages, index, { ...image, title: event.target.value }, onGalleryChange)}
-                />
-              </AdminField>
-              <AdminField label="Image URL">
-                <input
-                  value={image.url}
-                  onChange={(event) => updateListItem(galleryImages, index, { ...image, url: event.target.value }, onGalleryChange)}
-                />
-              </AdminField>
-            </div>
-          ))}
-        </AdminPanel>
+        {activeSection === 'gallery' ? (
+          <AdminPanel icon={<Image size={20} />} title="Manage gallery">
+            {galleryImages.map((image, index) => (
+              <div className="admin-item" key={image.alt}>
+                <AdminField label="Image title">
+                  <input
+                    value={image.title}
+                    onChange={(event) => updateListItem(galleryImages, index, { ...image, title: event.target.value }, onGalleryChange)}
+                  />
+                </AdminField>
+                <AdminField label="Image URL">
+                  <input
+                    value={image.url}
+                    onChange={(event) => updateListItem(galleryImages, index, { ...image, url: event.target.value }, onGalleryChange)}
+                  />
+                </AdminField>
+              </div>
+            ))}
+          </AdminPanel>
+        ) : null}
 
-        <AdminPanel icon={<Star size={20} />} title="Client reviews">
-          {reviews.map((review, index) => (
-            <div className="admin-item" key={review.name}>
-              <AdminField label="Client name">
-                <input
-                  value={review.name}
-                  onChange={(event) => updateListItem(reviews, index, { ...review, name: event.target.value }, onReviewChange)}
-                />
-              </AdminField>
-              <AdminField label="Review">
-                <textarea
-                  value={review.quote}
-                  onChange={(event) => updateListItem(reviews, index, { ...review, quote: event.target.value }, onReviewChange)}
-                />
-              </AdminField>
-              <label className="toggle-row">
-                <input
-                  checked={review.isVisible}
-                  type="checkbox"
-                  onChange={(event) => updateListItem(reviews, index, { ...review, isVisible: event.target.checked }, onReviewChange)}
-                />
-                Show on website
-              </label>
-            </div>
-          ))}
-        </AdminPanel>
-      </div>
-    </section>
+        {activeSection === 'website-details' ? (
+          <AdminPanel icon={<Settings size={20} />} title="Manage website details">
+            <AdminField label="Phone">
+              <input value={settings.phone} onChange={(event) => onSettingsChange({ ...settings, phone: event.target.value })} />
+            </AdminField>
+            <AdminField label="Email">
+              <input value={settings.email} onChange={(event) => onSettingsChange({ ...settings, email: event.target.value })} />
+            </AdminField>
+            <AdminField label="Address">
+              <textarea value={settings.address} onChange={(event) => onSettingsChange({ ...settings, address: event.target.value })} />
+            </AdminField>
+            <AdminField label="Instagram profile">
+              <input
+                value={settings.instagramUrl}
+                onChange={(event) => onSettingsChange({ ...settings, instagramUrl: event.target.value })}
+              />
+            </AdminField>
+          </AdminPanel>
+        ) : null}
+
+        {activeSection === 'services' ? (
+          <AdminPanel icon={<Sparkles size={20} />} title="Manage services">
+            <button
+              className="small-admin-button"
+              type="button"
+              onClick={() => onServiceChange([...services, { title: 'New Service', description: 'Service description', price: 'From $0', image: settings.heroImage }])}
+            >
+              <Plus size={16} />
+              Add Service
+            </button>
+            {services.map((service, index) => (
+              <div className="admin-item" key={`${service.title}-${index}`}>
+                <AdminField label="Service name">
+                  <input
+                    value={service.title}
+                    onChange={(event) => updateListItem(services, index, { ...service, title: event.target.value }, onServiceChange)}
+                  />
+                </AdminField>
+                <AdminField label="Description">
+                  <textarea
+                    value={service.description}
+                    onChange={(event) => updateListItem(services, index, { ...service, description: event.target.value }, onServiceChange)}
+                  />
+                </AdminField>
+                <AdminField label="Price">
+                  <input
+                    value={service.price}
+                    onChange={(event) => updateListItem(services, index, { ...service, price: event.target.value }, onServiceChange)}
+                  />
+                </AdminField>
+                <button className="danger-admin-button" type="button" onClick={() => onServiceChange(services.filter((_, itemIndex) => itemIndex !== index))}>
+                  <Trash2 size={16} />
+                  Delete
+                </button>
+              </div>
+            ))}
+          </AdminPanel>
+        ) : null}
+
+        {activeSection === 'reviews' ? (
+          <AdminPanel icon={<Star size={20} />} title="Client reviews">
+            {reviews.map((review, index) => (
+              <div className="admin-item" key={`${review.name}-${index}`}>
+                <AdminField label="Client name">
+                  <input
+                    value={review.name}
+                    onChange={(event) => updateListItem(reviews, index, { ...review, name: event.target.value }, onReviewChange)}
+                  />
+                </AdminField>
+                <AdminField label="Review">
+                  <textarea
+                    value={review.quote}
+                    onChange={(event) => updateListItem(reviews, index, { ...review, quote: event.target.value }, onReviewChange)}
+                  />
+                </AdminField>
+                <label className="toggle-row">
+                  <input
+                    checked={review.isVisible}
+                    type="checkbox"
+                    onChange={(event) => updateListItem(reviews, index, { ...review, isVisible: event.target.checked }, onReviewChange)}
+                  />
+                  Show on website
+                </label>
+              </div>
+            ))}
+          </AdminPanel>
+        ) : null}
+
+        {activeSection === 'vouchers' ? (
+          <AdminPanel icon={<Gift size={20} />} title="Voucher management">
+            <button
+              className="small-admin-button"
+              type="button"
+              onClick={() => onVoucherChange([...vouchers, { code: 'NEWCODE', description: 'New voucher', value: '10%', status: 'Draft' }])}
+            >
+              <Plus size={16} />
+              Add Voucher
+            </button>
+            {vouchers.map((voucher, index) => (
+              <div className="admin-row" key={`${voucher.code}-${index}`}>
+                <div>
+                  <strong>{voucher.code}</strong>
+                  <span>{voucher.description} . {voucher.value}</span>
+                </div>
+                <select
+                  value={voucher.status}
+                  onChange={(event) => updateListItem(vouchers, index, { ...voucher, status: event.target.value }, onVoucherChange)}
+                >
+                  <option>Active</option>
+                  <option>Draft</option>
+                  <option>Expired</option>
+                </select>
+              </div>
+            ))}
+          </AdminPanel>
+        ) : null}
+      </section>
+    </div>
   );
 }
 
-function AdminLogin({ onLogin }: { onLogin: () => void }) {
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onLogin();
-  }
-
-  return (
-    <section className="admin-login-section" id="admin">
-      <form className="admin-login-card" onSubmit={handleSubmit}>
-        <LayoutDashboard size={34} />
-        <p>Client Admin</p>
-        <h2>Login to manage salon content</h2>
-        <label>
-          Email
-          <input defaultValue="admin@kbeautysalon.com" type="email" />
-        </label>
-        <label>
-          Password
-          <input defaultValue="preview123" type="password" />
-        </label>
-        <button className="primary-button full-width" type="submit">
-          Login Preview
-        </button>
-        <span>Preview only. Supabase Auth will secure this before launch.</span>
-      </form>
-    </section>
-  );
-}
+const adminMenuItems: { id: AdminSection; label: string; icon: ReactNode }[] = [
+  { id: 'home-page', label: 'Home page', icon: <Home size={18} /> },
+  { id: 'new-leads', label: 'New Leads', icon: <Mail size={18} /> },
+  { id: 'bookings', label: 'Bookings', icon: <CalendarDays size={18} /> },
+  { id: 'gallery', label: 'Manage Gallery', icon: <Image size={18} /> },
+  { id: 'website-details', label: 'Manage Website Details', icon: <Settings size={18} /> },
+  { id: 'services', label: 'Manage Service', icon: <Sparkles size={18} /> },
+  { id: 'reviews', label: 'Client Review', icon: <Star size={18} /> },
+  { id: 'vouchers', label: 'Voucher Management', icon: <Gift size={18} /> },
+];
 
 function AdminPanel({ children, icon, title }: { children: ReactNode; icon: ReactNode; title: string }) {
   return (
@@ -665,16 +837,6 @@ function AdminField({ children, label }: { children: ReactNode; label: string })
       {label}
       {children}
     </label>
-  );
-}
-
-function AdminStat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="admin-stat">
-      {icon}
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
   );
 }
 
