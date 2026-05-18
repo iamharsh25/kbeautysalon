@@ -89,14 +89,39 @@ Stores gallery metadata. Actual files should live in Supabase Storage.
 - `display_order integer`
 - `created_at timestamptz`
 
+### salon_settings
+
+Stores editable website settings controlled by the salon admin.
+
+- `id uuid primary key`
+- `salon_name text`
+- `hero_image_url text`
+- `instagram_url text`
+- `phone text`
+- `email text`
+- `address text`
+- `updated_at timestamptz`
+
+### client_reviews
+
+Stores public testimonials that admins can approve, hide, or edit.
+
+- `id uuid primary key`
+- `client_name text`
+- `rating integer`
+- `review_text text`
+- `is_visible boolean`
+- `display_order integer`
+- `created_at timestamptz`
+
 ## Security plan
 
 - Enable Row Level Security on every public table.
-- Customers can read active services and featured gallery images.
+- Customers can read active services, salon settings, approved reviews, and featured gallery images.
 - Customers can create contact messages.
 - Customers can create bookings for their own user account.
 - Customers can view, update, or cancel only their own bookings.
-- Admin/staff users can manage services, gallery images, vouchers, and all bookings.
+- Admin/staff users can manage services, gallery images, vouchers, all bookings, leads, reviews, and salon settings.
 - Never store passwords yourself. Supabase Auth stores and protects credentials.
 - Never put service-role keys in React. The website should only use the public anon key.
 
@@ -175,12 +200,35 @@ create table public.image_gallery (
   created_at timestamptz not null default now()
 );
 
+create table public.salon_settings (
+  id uuid primary key default gen_random_uuid(),
+  salon_name text not null default 'KBeauty Salon',
+  hero_image_url text,
+  instagram_url text,
+  phone text,
+  email text,
+  address text,
+  updated_at timestamptz not null default now()
+);
+
+create table public.client_reviews (
+  id uuid primary key default gen_random_uuid(),
+  client_name text not null,
+  rating integer not null default 5 check (rating between 1 and 5),
+  review_text text not null,
+  is_visible boolean not null default false,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 alter table public.profiles enable row level security;
 alter table public.contact_info enable row level security;
 alter table public.service_menu enable row level security;
 alter table public.booking_details enable row level security;
 alter table public.vouchers enable row level security;
 alter table public.image_gallery enable row level security;
+alter table public.salon_settings enable row level security;
+alter table public.client_reviews enable row level security;
 
 create policy "Anyone can view active services"
 on public.service_menu for select
@@ -189,6 +237,14 @@ using (is_active = true);
 create policy "Anyone can view featured gallery images"
 on public.image_gallery for select
 using (is_featured = true);
+
+create policy "Anyone can view salon settings"
+on public.salon_settings for select
+using (true);
+
+create policy "Anyone can view visible client reviews"
+on public.client_reviews for select
+using (is_visible = true);
 
 create policy "Anyone can create contact messages"
 on public.contact_info for insert
@@ -215,4 +271,18 @@ on public.booking_details for update
 using (auth.uid() = customer_id);
 ```
 
-Admin policies can be added after the admin dashboard is built.
+## Admin dashboard permissions
+
+The dashboard must only be available to users whose `profiles.role` is `admin` or `staff`.
+
+Admin/staff should be allowed to:
+
+- update `salon_settings`
+- create, update, and hide rows in `service_menu`
+- view and update all rows in `booking_details`
+- view and update all rows in `contact_info`
+- create, update, and hide rows in `image_gallery`
+- create, update, and hide rows in `client_reviews`
+- create and update rows in `vouchers`
+
+These admin policies should be added when Supabase is connected, because they depend on the real auth user IDs.
