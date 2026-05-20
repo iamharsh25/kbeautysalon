@@ -202,7 +202,7 @@ create table public.image_gallery (
 
 create table public.salon_settings (
   id uuid primary key default gen_random_uuid(),
-  salon_name text not null default 'KBeauty Salon',
+  salon_name text not null default 'K Beauty Salon',
   hero_image_url text,
   instagram_url text,
   phone text,

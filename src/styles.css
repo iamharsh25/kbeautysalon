@@ -76,6 +76,7 @@ textarea {
   gap: 12px;
 }
 
+.brand-logo,
 .brand-mark {
   align-items: center;
   aspect-ratio: 1;
@@ -88,6 +89,13 @@ textarea {
   font-weight: 700;
   justify-content: center;
   width: 42px;
+}
+
+.brand-logo {
+  background: transparent;
+  border-radius: 0;
+  object-fit: contain;
+  width: 48px;
 }
 
 .desktop-nav {

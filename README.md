@@ -1,4 +1,4 @@
-# KBeauty Salon Website
+# K Beauty Salon Website
 
 React home page for a modern, simple, responsive salon website.
 
@@ -22,7 +22,7 @@ npm run dev
 
 ## Replace the logo
 
-The temporary logo is the `KB` circle in `src/App.tsx`. Later, add your real logo file to `public/logo.svg` or `public/logo.png`, then replace the `brand-mark` span inside the `Header` component with an image.
+The logo is served from `public/homepage/logo-wo-bg.png`. Replace that file with a new transparent logo anytime you want to update the brand mark.
 
 ## Current scope
 

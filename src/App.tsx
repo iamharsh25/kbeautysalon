@@ -179,9 +179,9 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
 
   return (
     <header className="site-header">
-      <a className="brand" href="#home" aria-label="KBeauty Salon home">
-        <span className="brand-mark">KB</span>
-        <span>KBeauty Salon</span>
+      <a className="brand" href="#home" aria-label="K Beauty Salon home">
+        <img className="brand-logo" src="/homepage/logo-wo-bg.png" alt="" />
+        <span>K Beauty Salon</span>
       </a>
 
       <nav className="desktop-nav" aria-label="Main navigation">
@@ -263,7 +263,7 @@ function Hero({ heroImage }: { heroImage: string }) {
       </div>
       <div className="hero-overlay">
         <p>Beauty Studio</p>
-        <h1>KBeauty Salon</h1>
+          <h1>K Beauty Salon</h1>
         <span>Hair . Beauty . Nails</span>
         <div className="hero-actions">
           <a className="primary-button" href="#booking">
@@ -330,7 +330,7 @@ function FounderStory() {
       <div className="story-copy">
         <SectionHeading eyebrow="Founder Story" title="Built from care, skill, and family" />
         <p>
-          KBeauty Salon began with a simple promise: every client should feel listened to before a
+          K Beauty Salon began with a simple promise: every client should feel listened to before a
           service begins and genuinely cared for after they leave. The founder grew up around women
           who made beauty feel practical, warm, and personal, and that feeling became the heart of
           the salon.
@@ -604,9 +604,9 @@ function AdminDashboard({
     <div className="admin-page">
       <aside className="admin-sidebar">
         <div className="admin-sidebar-brand">
-          <span className="brand-mark">KB</span>
+          <img className="brand-logo" src="/homepage/logo-wo-bg.png" alt="" />
           <div>
-            <strong>KBeauty Salon</strong>
+            <strong>K Beauty Salon</strong>
             <span>Admin Panel</span>
           </div>
         </div>
