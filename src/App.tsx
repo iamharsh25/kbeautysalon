@@ -25,6 +25,7 @@ import {
   UserCheck,
   UserRound,
 } from 'lucide-react';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 type Service = {
   title: string;
@@ -855,7 +856,32 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view, selectedAlbum.title]);
 
-  function handleLogin(email: string, password: string) {
+  async function handleLogin(email: string, password: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error || !data.user) {
+        setLoginError('Login failed. Please check your email and password.');
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        setLoginError('Account found, but no profile role is connected yet.');
+        return;
+      }
+
+      setView(profile.role === 'admin' || profile.role === 'staff' ? 'admin' : 'client');
+      setIsLoginOpen(false);
+      setLoginError('');
+      return;
+    }
+
     if (email.toLowerCase() === 'admin@kbeautysalon.com' && password === 'preview123') {
       setView('admin');
       setIsLoginOpen(false);
@@ -958,12 +984,12 @@ function LoginModal({
 }: {
   error: string;
   onClose: () => void;
-  onLogin: (email: string, password: string) => void;
+  onLogin: (email: string, password: string) => void | Promise<void>;
 }) {
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    onLogin(String(formData.get('email')), String(formData.get('password')));
+    await onLogin(String(formData.get('email')), String(formData.get('password')));
   }
 
   return (

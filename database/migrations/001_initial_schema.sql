@@ -1,0 +1,329 @@
+create extension if not exists "pgcrypto";
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  full_name text not null,
+  email text,
+  phone text,
+  address_line1 text,
+  address_line2 text,
+  suburb text,
+  state text,
+  postcode text,
+  role text not null default 'client' check (role in ('client', 'staff', 'admin')),
+  date_of_birth date,
+  marketing_opt_in boolean not null default false,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.staff_profiles (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid references public.profiles(id) on delete set null,
+  display_name text not null,
+  job_title text not null,
+  bio text,
+  phone text,
+  email text,
+  specialties text[] not null default '{}',
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.contact_info (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text,
+  phone text,
+  subject text,
+  message text not null,
+  status text not null default 'new' check (status in ('new', 'read', 'closed')),
+  assigned_staff_id uuid references public.staff_profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.service_menu (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  slug text not null unique,
+  category text not null,
+  description text,
+  duration_minutes integer not null check (duration_minutes > 0),
+  price_cents integer not null check (price_cents >= 0),
+  image_url text,
+  is_active boolean not null default true,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.booking_details (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references public.profiles(id),
+  staff_id uuid references public.staff_profiles(id),
+  service_id uuid references public.service_menu(id),
+  appointment_start timestamptz not null,
+  appointment_end timestamptz not null,
+  status text not null default 'confirmed' check (status in ('draft', 'confirmed', 'cancelled', 'completed', 'no_show')),
+  source text not null default 'admin' check (source in ('admin', 'phone', 'instagram', 'walk_in', 'website_lead')),
+  price_cents integer,
+  deposit_cents integer,
+  client_notes text,
+  staff_notes text,
+  created_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (appointment_end > appointment_start)
+);
+
+create table if not exists public.vouchers (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  title text not null,
+  description text,
+  discount_type text not null check (discount_type in ('fixed', 'percentage')),
+  discount_value integer not null check (discount_value > 0),
+  starts_at timestamptz,
+  expires_at timestamptz,
+  max_uses integer,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.client_vouchers (
+  id uuid primary key default gen_random_uuid(),
+  voucher_id uuid not null references public.vouchers(id) on delete cascade,
+  client_id uuid not null references public.profiles(id) on delete cascade,
+  assigned_by uuid references public.profiles(id),
+  status text not null default 'available' check (status in ('available', 'used', 'expired', 'cancelled')),
+  used_booking_id uuid references public.booking_details(id),
+  assigned_at timestamptz not null default now(),
+  used_at timestamptz
+);
+
+create table if not exists public.gallery_albums (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  slug text not null unique,
+  description text,
+  cover_image_url text,
+  category text,
+  is_public boolean not null default true,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.gallery_images (
+  id uuid primary key default gen_random_uuid(),
+  album_id uuid not null references public.gallery_albums(id) on delete cascade,
+  title text not null,
+  alt_text text,
+  image_url text not null,
+  storage_path text,
+  caption text,
+  is_featured boolean not null default false,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.client_gallery (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references public.profiles(id) on delete cascade,
+  booking_id uuid references public.booking_details(id) on delete set null,
+  category text not null default 'other' check (category in ('hair', 'nails', 'makeup', 'bridal', 'other')),
+  title text not null,
+  notes text,
+  image_url text not null,
+  storage_path text,
+  phone_snapshot text,
+  is_visible_to_staff boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.salon_settings (
+  id uuid primary key default gen_random_uuid(),
+  salon_name text not null default 'K Beauty Salon',
+  logo_url text,
+  hero_image_url text,
+  instagram_url text,
+  phone text,
+  email text,
+  address text,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.client_reviews (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid references public.profiles(id) on delete set null,
+  client_name text not null,
+  rating integer not null default 5 check (rating between 1 and 5),
+  review_text text not null,
+  is_visible boolean not null default false,
+  display_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+alter table public.staff_profiles enable row level security;
+alter table public.contact_info enable row level security;
+alter table public.service_menu enable row level security;
+alter table public.booking_details enable row level security;
+alter table public.vouchers enable row level security;
+alter table public.client_vouchers enable row level security;
+alter table public.gallery_albums enable row level security;
+alter table public.gallery_images enable row level security;
+alter table public.client_gallery enable row level security;
+alter table public.salon_settings enable row level security;
+alter table public.client_reviews enable row level security;
+
+create or replace function public.current_profile_role()
+returns text
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select role from public.profiles where id = auth.uid()
+$$;
+
+create or replace function public.is_admin_or_staff()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce(public.current_profile_role() in ('admin', 'staff'), false)
+$$;
+
+drop policy if exists "Public can view active services" on public.service_menu;
+create policy "Public can view active services"
+on public.service_menu for select
+using (is_active = true or public.is_admin_or_staff());
+
+drop policy if exists "Public can view public albums" on public.gallery_albums;
+create policy "Public can view public albums"
+on public.gallery_albums for select
+using (is_public = true or public.is_admin_or_staff());
+
+drop policy if exists "Public can view public album images" on public.gallery_images;
+create policy "Public can view public album images"
+on public.gallery_images for select
+using (exists (
+  select 1 from public.gallery_albums
+  where gallery_albums.id = gallery_images.album_id
+  and gallery_albums.is_public = true
+) or public.is_admin_or_staff());
+
+drop policy if exists "Public can view salon settings" on public.salon_settings;
+create policy "Public can view salon settings"
+on public.salon_settings for select
+using (true);
+
+drop policy if exists "Public can create leads" on public.contact_info;
+create policy "Public can create leads"
+on public.contact_info for insert
+with check (true);
+
+drop policy if exists "Users can view own profile" on public.profiles;
+create policy "Users can view own profile"
+on public.profiles for select
+using (auth.uid() = id or public.is_admin_or_staff());
+
+drop policy if exists "Admins can manage profiles" on public.profiles;
+create policy "Admins can manage profiles"
+on public.profiles for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Clients can view own bookings" on public.booking_details;
+create policy "Clients can view own bookings"
+on public.booking_details for select
+using (auth.uid() = client_id or public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage bookings" on public.booking_details;
+create policy "Staff can manage bookings"
+on public.booking_details for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Clients can view own assigned vouchers" on public.client_vouchers;
+create policy "Clients can view own assigned vouchers"
+on public.client_vouchers for select
+using (auth.uid() = client_id or public.is_admin_or_staff());
+
+drop policy if exists "Staff can assign vouchers" on public.client_vouchers;
+create policy "Staff can assign vouchers"
+on public.client_vouchers for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Clients can manage own gallery" on public.client_gallery;
+create policy "Clients can manage own gallery"
+on public.client_gallery for all
+using (auth.uid() = client_id or public.is_admin_or_staff())
+with check (auth.uid() = client_id or public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage staff profiles" on public.staff_profiles;
+create policy "Staff can manage staff profiles"
+on public.staff_profiles for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage leads" on public.contact_info;
+create policy "Staff can manage leads"
+on public.contact_info for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage services" on public.service_menu;
+create policy "Staff can manage services"
+on public.service_menu for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage vouchers" on public.vouchers;
+create policy "Staff can manage vouchers"
+on public.vouchers for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage albums" on public.gallery_albums;
+create policy "Staff can manage albums"
+on public.gallery_albums for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage album images" on public.gallery_images;
+create policy "Staff can manage album images"
+on public.gallery_images for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage settings" on public.salon_settings;
+create policy "Staff can manage settings"
+on public.salon_settings for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+drop policy if exists "Public can view visible reviews" on public.client_reviews;
+create policy "Public can view visible reviews"
+on public.client_reviews for select
+using (is_visible = true or public.is_admin_or_staff());
+
+drop policy if exists "Staff can manage reviews" on public.client_reviews;
+create policy "Staff can manage reviews"
+on public.client_reviews for all
+using (public.is_admin_or_staff())
+with check (public.is_admin_or_staff());
+
+insert into public.salon_settings (salon_name, instagram_url, phone, email, address)
+select 'K Beauty Salon', 'https://www.instagram.com/kbeautyglamsalon/', '04XX XXX XXX', 'hello@kbeautysalon.com', 'Your salon address will go here once confirmed.'
+where not exists (select 1 from public.salon_settings);
