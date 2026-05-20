@@ -2,6 +2,10 @@ import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import {
   ArrowRight,
   CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
   Gift,
   Home,
   Image,
@@ -11,10 +15,12 @@ import {
   Menu,
   MessageSquare,
   Plus,
+  Scissors,
   Settings,
   Sparkles,
   Star,
   Trash2,
+  UserCheck,
 } from 'lucide-react';
 
 type Service = {
@@ -105,6 +111,41 @@ const initialServices: Service[] = [
     image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=900&q=80',
   },
 ];
+
+const bookingServices = [
+  {
+    title: 'Hair Styling',
+    duration: '60 min',
+    price: 65,
+    image: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=240&q=80',
+  },
+  {
+    title: 'Hair Coloring',
+    duration: '90 min',
+    price: 120,
+    image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&w=240&q=80',
+  },
+  {
+    title: 'Balayage',
+    duration: '120 min',
+    price: 150,
+    image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=240&q=80',
+  },
+  {
+    title: 'Makeup',
+    duration: '75 min',
+    price: 85,
+    image: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=240&q=80',
+  },
+  {
+    title: 'Nails',
+    duration: '45 min',
+    price: 55,
+    image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=240&q=80',
+  },
+];
+
+const bookingTimes = ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'];
 
 const initialGalleryImages: GalleryImage[] = [
   {
@@ -284,7 +325,7 @@ const initialSettings: SiteSettings = {
   address: 'Your salon address will go here once confirmed.',
 };
 
-function Header({ onLoginClick }: { onLoginClick: () => void }) {
+function Header({ onBookClick, onLoginClick }: { onBookClick: () => void; onLoginClick: () => void }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -300,7 +341,7 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
             {item}
           </a>
         ))}
-        <a href="#contact-us">Book Now</a>
+        <button className="nav-login-button" type="button" onClick={onBookClick}>Book Now</button>
         <button className="nav-login-button" type="button" onClick={onLoginClick}>Login</button>
       </nav>
 
@@ -316,15 +357,25 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
 
       {isMenuOpen ? (
         <nav className="mobile-nav" aria-label="Mobile navigation">
-          {[...navItems, 'Book Now'].map((item) => (
+          {navItems.map((item) => (
             <a
               key={item}
-              href={item === 'Book Now' ? '#contact-us' : `#${item.toLowerCase().replaceAll(' ', '-')}`}
+              href={`#${item.toLowerCase().replaceAll(' ', '-')}`}
               onClick={() => setIsMenuOpen(false)}
             >
               {item}
             </a>
           ))}
+          <button
+            className="mobile-login-button"
+            type="button"
+            onClick={() => {
+              setIsMenuOpen(false);
+              onBookClick();
+            }}
+          >
+            Book Now
+          </button>
           <button
             className="mobile-login-button"
             type="button"
@@ -341,7 +392,7 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
   );
 }
 
-function Hero({ heroImage }: { heroImage: string }) {
+function Hero({ heroImage, onBookClick }: { heroImage: string; onBookClick: () => void }) {
   const carouselImages = [
     heroImage,
     '/homepage/salon_1.jpg',
@@ -376,10 +427,10 @@ function Hero({ heroImage }: { heroImage: string }) {
         <h1>K Beauty Salon</h1>
         <span>Hair . Beauty . Nails</span>
         <div className="hero-actions">
-          <a className="primary-button" href="#contact-us">
+          <button className="primary-button" type="button" onClick={onBookClick}>
             Book Appointment
             <ArrowRight size={18} />
-          </a>
+          </button>
           <a className="secondary-link" href="#services">Services</a>
         </div>
         <div className="hero-dots" aria-label="Carousel slide controls">
@@ -576,8 +627,162 @@ function ContactBand({ settings }: { settings: SiteSettings }) {
   );
 }
 
+function BookingPage({ onBack }: { onBack: () => void }) {
+  const [selectedServiceIndex, setSelectedServiceIndex] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(20);
+  const [selectedTime, setSelectedTime] = useState('10:00 AM');
+  const selectedService = bookingServices[selectedServiceIndex];
+  const calendarDays = [
+    { day: 26, muted: true },
+    { day: 27, muted: true },
+    { day: 28, muted: true },
+    { day: 29, muted: true },
+    { day: 30, muted: true },
+    ...Array.from({ length: 31 }, (_, index) => ({ day: index + 1, muted: false })),
+  ];
+
+  return (
+    <main className="booking-page">
+      <nav className="booking-nav" aria-label="Booking page navigation">
+        <button className="booking-brand" type="button" onClick={onBack}>
+          <img className="brand-logo" src="/homepage/logo-wo-bg.png" alt="" />
+          <span>K Beauty Salon</span>
+        </button>
+        <div>
+          <button type="button" onClick={onBack}>Home</button>
+          <button type="button">Services</button>
+          <button type="button">Gallery</button>
+          <button type="button">Contact</button>
+        </div>
+        <a href="tel:+61400000000">04XX XXX XXX</a>
+      </nav>
+
+      <section className="booking-title">
+        <p><Sparkles size={15} /> Book Appointment</p>
+        <h1>Book Your Perfect Time</h1>
+        <span>Choose your service, pick a date, and select a time that works best for you.</span>
+      </section>
+
+      <section className="booking-workspace">
+        <article className="booking-column">
+          <BookingColumnTitle icon={<Scissors size={22} />} title="Select Service" text="Choose your desired service" />
+          <div className="booking-service-list">
+            {bookingServices.map((service, index) => (
+              <button
+                className={selectedServiceIndex === index ? 'booking-service-card selected' : 'booking-service-card'}
+                key={service.title}
+                type="button"
+                onClick={() => setSelectedServiceIndex(index)}
+              >
+                <img src={service.image} alt="" />
+                <span>
+                  <strong>{service.title}</strong>
+                  <small>{service.duration}</small>
+                </span>
+                <b>${service.price}</b>
+                {selectedServiceIndex === index ? <CheckCircle2 size={22} /> : null}
+              </button>
+            ))}
+          </div>
+        </article>
+
+        <article className="booking-column">
+          <BookingColumnTitle icon={<CalendarDays size={22} />} title="Select Date" text="Pick a date that works for you" />
+          <div className="booking-calendar">
+            <div className="booking-calendar-header">
+              <button type="button" aria-label="Previous month"><ChevronLeft size={18} /></button>
+              <strong>May 2026</strong>
+              <button type="button" aria-label="Next month"><ChevronRight size={18} /></button>
+            </div>
+            <div className="booking-weekdays">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}
+            </div>
+            <div className="booking-days">
+              {calendarDays.map((date, index) => (
+                <button
+                  className={`${date.muted ? 'muted' : ''} ${selectedDate === date.day && !date.muted ? 'selected' : ''}`}
+                  key={`${date.day}-${index}`}
+                  type="button"
+                  onClick={() => !date.muted && setSelectedDate(date.day)}
+                >
+                  {date.day}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="selected-date-card">
+            <Sparkles size={22} />
+            <span>
+              <strong>May {selectedDate}, 2026</strong>
+              <small>Wednesday</small>
+            </span>
+          </div>
+        </article>
+
+        <article className="booking-column">
+          <BookingColumnTitle icon={<Clock size={22} />} title="Select Time" text="Choose an available time slot" />
+          <div className="booking-time-heading">
+            <span>Available times for</span>
+            <strong>May {selectedDate}, 2026</strong>
+          </div>
+          <div className="booking-time-grid">
+            {bookingTimes.map((time) => (
+              <button
+                className={selectedTime === time ? 'selected' : ''}
+                key={time}
+                type="button"
+                onClick={() => setSelectedTime(time)}
+              >
+                {time}
+              </button>
+            ))}
+          </div>
+          <div className="booking-summary">
+            <h2>Booking Summary</h2>
+            <div className="booking-summary-service">
+              <img src={selectedService.image} alt="" />
+              <span>
+                <strong>{selectedService.title}</strong>
+                <small>{selectedService.duration}</small>
+              </span>
+              <b>${selectedService.price}</b>
+            </div>
+            <dl>
+              <div><dt>Date</dt><dd>May {selectedDate}, 2026</dd></div>
+              <div><dt>Time</dt><dd>{selectedTime}</dd></div>
+              <div><dt>Total</dt><dd>${selectedService.price}.00</dd></div>
+            </dl>
+            <button className="confirm-booking-button" type="button">
+              Confirm Booking
+              <ArrowRight size={18} />
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section className="booking-benefits">
+        <span><CheckCircle2 size={22} /> Easy Booking <small>Book in just a few clicks</small></span>
+        <span><CalendarDays size={22} /> 24/7 Availability <small>Book anytime, anywhere</small></span>
+        <span><UserCheck size={22} /> Expert Stylists <small>Get styled by professionals</small></span>
+      </section>
+    </main>
+  );
+}
+
+function BookingColumnTitle({ icon, text, title }: { icon: ReactNode; text: string; title: string }) {
+  return (
+    <div className="booking-column-title">
+      <span>{icon}</span>
+      <div>
+        <h2>{title}</h2>
+        <p>{text}</p>
+      </div>
+    </div>
+  );
+}
+
 export function App() {
-  const [view, setView] = useState<'public' | 'admin' | 'album'>('public');
+  const [view, setView] = useState<'public' | 'admin' | 'album' | 'booking'>('public');
   const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum>(galleryAlbums[0]);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -639,11 +844,15 @@ export function App() {
     );
   }
 
+  if (view === 'booking') {
+    return <BookingPage onBack={() => setView('public')} />;
+  }
+
   return (
     <>
-      <Header onLoginClick={() => setIsLoginOpen(true)} />
+      <Header onBookClick={() => setView('booking')} onLoginClick={() => setIsLoginOpen(true)} />
       <main>
-        <Hero heroImage={settings.heroImage} />
+        <Hero heroImage={settings.heroImage} onBookClick={() => setView('booking')} />
         <ServicesPreview services={services} />
         <FounderStory />
         <GalleryPreview
