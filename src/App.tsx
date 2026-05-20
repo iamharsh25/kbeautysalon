@@ -1,7 +1,8 @@
-import { FormEvent, ReactNode, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, ReactNode, useEffect, useState } from 'react';
 import {
   ArrowRight,
   CalendarDays,
+  Camera,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -19,8 +20,10 @@ import {
   Settings,
   Sparkles,
   Star,
+  Ticket,
   Trash2,
   UserCheck,
+  UserRound,
 } from 'lucide-react';
 
 type Service = {
@@ -71,6 +74,28 @@ type Voucher = {
   status: string;
 };
 
+type StaffMember = {
+  name: string;
+  role: string;
+  phone: string;
+  email: string;
+  status: string;
+};
+
+type ClientProfile = {
+  name: string;
+  phone: string;
+  address: string;
+  email: string;
+};
+
+type ClientPhoto = {
+  title: string;
+  category: string;
+  image: string;
+  notes: string;
+};
+
 type SiteSettings = {
   heroImage: string;
   instagramUrl: string;
@@ -87,7 +112,10 @@ type AdminSection =
   | 'website-details'
   | 'services'
   | 'reviews'
-  | 'vouchers';
+  | 'vouchers'
+  | 'staff';
+
+type ClientSection = 'gallery' | 'vouchers' | 'bookings' | 'account';
 
 const navItems = ['Home', 'About Us', 'Services', 'Gallery', 'Contact Us'];
 
@@ -315,6 +343,33 @@ const initialReviews: Review[] = [
 const initialVouchers: Voucher[] = [
   { code: 'WELCOME10', description: 'Introductory discount for new clients', value: '10%', status: 'Active' },
   { code: 'GIFT50', description: 'Gift voucher credit', value: '$50', status: 'Draft' },
+];
+
+const initialStaff: StaffMember[] = [
+  { name: 'Kavya Patel', role: 'Senior Stylist', phone: '04XX 111 222', email: 'kavya@kbeautysalon.com', status: 'Active' },
+  { name: 'Mia Chen', role: 'Makeup Artist', phone: '04XX 333 444', email: 'mia@kbeautysalon.com', status: 'Active' },
+];
+
+const demoClientProfile: ClientProfile = {
+  name: 'Aisha Patel',
+  phone: '04XX 555 777',
+  address: '12 Garden Street, Melbourne VIC',
+  email: 'client@kbeautysalon.com',
+};
+
+const initialClientPhotos: ClientPhoto[] = [
+  {
+    title: 'Soft glam reference',
+    category: 'Makeup',
+    image: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=700&q=80',
+    notes: 'Loved this soft finish for evening events.',
+  },
+  {
+    title: 'Nail colour memory',
+    category: 'Nails',
+    image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=700&q=80',
+    notes: 'Ask for this shape and red polish again.',
+  },
 ];
 
 const initialSettings: SiteSettings = {
@@ -782,7 +837,7 @@ function BookingColumnTitle({ icon, text, title }: { icon: ReactNode; text: stri
 }
 
 export function App() {
-  const [view, setView] = useState<'public' | 'admin' | 'album' | 'booking'>('public');
+  const [view, setView] = useState<'public' | 'admin' | 'album' | 'booking' | 'client'>('public');
   const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum>(galleryAlbums[0]);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
@@ -792,6 +847,8 @@ export function App() {
   const [leads, setLeads] = useState(initialLeads);
   const [reviews, setReviews] = useState(initialReviews);
   const [vouchers, setVouchers] = useState(initialVouchers);
+  const [staffMembers, setStaffMembers] = useState(initialStaff);
+  const [clientPhotos, setClientPhotos] = useState(initialClientPhotos);
   const [settings, setSettings] = useState(initialSettings);
 
   useEffect(() => {
@@ -806,7 +863,7 @@ export function App() {
       return;
     }
 
-    setView('public');
+    setView('client');
     setIsLoginOpen(false);
     setLoginError('');
   }
@@ -819,6 +876,7 @@ export function App() {
         leads={leads}
         reviews={reviews}
         services={services}
+        staffMembers={staffMembers}
         settings={settings}
         vouchers={vouchers}
         onBookingChange={setBookings}
@@ -827,8 +885,22 @@ export function App() {
         onLogout={() => setView('public')}
         onReviewChange={setReviews}
         onServiceChange={setServices}
+        onStaffChange={setStaffMembers}
         onSettingsChange={setSettings}
         onVoucherChange={setVouchers}
+      />
+    );
+  }
+
+  if (view === 'client') {
+    return (
+      <ClientDashboard
+        bookings={bookings}
+        photos={clientPhotos}
+        profile={demoClientProfile}
+        vouchers={vouchers.filter((voucher) => voucher.status === 'Active')}
+        onLogout={() => setView('public')}
+        onPhotoAdd={(photo) => setClientPhotos([photo, ...clientPhotos])}
       />
     );
   }
@@ -915,8 +987,145 @@ function LoginModal({
         <button className="primary-button full-width" type="submit">
           Login
         </button>
-        <span>Preview admin: admin@kbeautysalon.com / preview123</span>
+        <span>Admin demo: admin@kbeautysalon.com / preview123. Client demo: use any other email.</span>
       </form>
+    </div>
+  );
+}
+
+function ClientDashboard({
+  bookings,
+  onLogout,
+  onPhotoAdd,
+  photos,
+  profile,
+  vouchers,
+}: {
+  bookings: Booking[];
+  onLogout: () => void;
+  onPhotoAdd: (photo: ClientPhoto) => void;
+  photos: ClientPhoto[];
+  profile: ClientProfile;
+  vouchers: Voucher[];
+}) {
+  const [activeSection, setActiveSection] = useState<ClientSection>('gallery');
+  const activeLabel = clientMenuItems.find((item) => item.id === activeSection)?.label ?? 'My Gallery';
+
+  function handleUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    onPhotoAdd({
+      title: file.name.replace(/\.[^.]+$/, ''),
+      category: 'Uploaded',
+      image: URL.createObjectURL(file),
+      notes: 'Saved as a client reference for the next appointment.',
+    });
+    event.target.value = '';
+  }
+
+  return (
+    <div className="admin-page">
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-brand">
+          <img className="brand-logo" src="/homepage/logo-wo-bg.png" alt="" />
+          <div>
+            <strong>K Beauty Salon</strong>
+            <span>Client Portal</span>
+          </div>
+        </div>
+        <nav aria-label="Client navigation">
+          {clientMenuItems.map((item) => (
+            <button
+              className={activeSection === item.id ? 'active' : ''}
+              key={item.id}
+              type="button"
+              onClick={() => setActiveSection(item.id)}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <button className="admin-logout-button" type="button" onClick={onLogout}>
+          View Website
+        </button>
+      </aside>
+
+      <section className="admin-content">
+        <div className="admin-topbar">
+          <div>
+            <p>Client Dashboard</p>
+            <h1>{activeLabel}</h1>
+          </div>
+          <button className="outline-admin-button" type="button" onClick={onLogout}>
+            Log out
+          </button>
+        </div>
+
+        {activeSection === 'gallery' ? (
+          <AdminPanel icon={<Camera size={20} />} title="My Gallery">
+            <div className="client-upload-panel">
+              <div>
+                <strong>Upload your style memory</strong>
+                <p>Add hair, makeup, or nail photos so the salon can remember what you liked last time.</p>
+              </div>
+              <label className="small-admin-button">
+                <Camera size={16} />
+                Upload Photo
+                <input accept="image/*" type="file" onChange={handleUpload} />
+              </label>
+            </div>
+            <div className="client-photo-grid">
+              {photos.map((photo) => (
+                <article className="client-photo-card" key={`${photo.title}-${photo.image}`}>
+                  <img src={photo.image} alt={photo.title} />
+                  <span>{photo.category}</span>
+                  <h3>{photo.title}</h3>
+                  <p>{photo.notes}</p>
+                </article>
+              ))}
+            </div>
+          </AdminPanel>
+        ) : null}
+
+        {activeSection === 'vouchers' ? (
+          <AdminPanel icon={<Ticket size={20} />} title="My Vouchers">
+            {vouchers.map((voucher) => (
+              <div className="voucher-card" key={voucher.code}>
+                <span>{voucher.code}</span>
+                <strong>{voucher.value}</strong>
+                <p>{voucher.description}</p>
+              </div>
+            ))}
+          </AdminPanel>
+        ) : null}
+
+        {activeSection === 'bookings' ? (
+          <AdminPanel icon={<CalendarDays size={20} />} title="Previous Bookings">
+            {bookings.map((booking) => (
+              <div className="admin-row" key={`${booking.client}-${booking.time}`}>
+                <div>
+                  <strong>{booking.service}</strong>
+                  <span>{booking.time}</span>
+                </div>
+                <span>{booking.status}</span>
+              </div>
+            ))}
+          </AdminPanel>
+        ) : null}
+
+        {activeSection === 'account' ? (
+          <AdminPanel icon={<UserRound size={20} />} title="My Account">
+            <div className="readonly-profile-grid">
+              <AdminField label="Name"><input readOnly value={profile.name} /></AdminField>
+              <AdminField label="Number"><input readOnly value={profile.phone} /></AdminField>
+              <AdminField label="Email"><input readOnly value={profile.email} /></AdminField>
+              <AdminField label="Address"><textarea readOnly value={profile.address} /></AdminField>
+            </div>
+          </AdminPanel>
+        ) : null}
+      </section>
     </div>
   );
 }
@@ -927,6 +1136,7 @@ function AdminDashboard({
   leads,
   reviews,
   services,
+  staffMembers,
   settings,
   vouchers,
   onBookingChange,
@@ -935,6 +1145,7 @@ function AdminDashboard({
   onLogout,
   onReviewChange,
   onServiceChange,
+  onStaffChange,
   onSettingsChange,
   onVoucherChange,
 }: {
@@ -943,6 +1154,7 @@ function AdminDashboard({
   leads: Lead[];
   reviews: Review[];
   services: Service[];
+  staffMembers: StaffMember[];
   settings: SiteSettings;
   vouchers: Voucher[];
   onBookingChange: (bookings: Booking[]) => void;
@@ -951,6 +1163,7 @@ function AdminDashboard({
   onLogout: () => void;
   onReviewChange: (reviews: Review[]) => void;
   onServiceChange: (services: Service[]) => void;
+  onStaffChange: (staffMembers: StaffMember[]) => void;
   onSettingsChange: (settings: SiteSettings) => void;
   onVoucherChange: (vouchers: Voucher[]) => void;
 }) {
@@ -1055,7 +1268,17 @@ function AdminDashboard({
         ) : null}
 
         {activeSection === 'gallery' ? (
-          <AdminPanel icon={<Image size={20} />} title="Manage gallery">
+          <AdminPanel icon={<Image size={20} />} title="Manage gallery albums and images">
+            <div className="admin-grid">
+              {galleryAlbums.map((album) => (
+                <div className="admin-item" key={album.title}>
+                  <img className="admin-image-preview" src={album.cover} alt="" />
+                  <AdminField label="Album name"><input readOnly value={album.title} /></AdminField>
+                  <AdminField label="Album description"><textarea readOnly value={album.description} /></AdminField>
+                  <button className="small-admin-button" type="button"><Plus size={16} /> Upload Image</button>
+                </div>
+              ))}
+            </div>
             {galleryImages.map((image, index) => (
               <div className="admin-item" key={image.alt}>
                 <AdminField label="Image title">
@@ -1069,6 +1292,41 @@ function AdminDashboard({
                     value={image.url}
                     onChange={(event) => updateListItem(galleryImages, index, { ...image, url: event.target.value }, onGalleryChange)}
                   />
+                </AdminField>
+              </div>
+            ))}
+          </AdminPanel>
+        ) : null}
+
+        {activeSection === 'staff' ? (
+          <AdminPanel icon={<UserCheck size={20} />} title="Manage staff">
+            <button
+              className="small-admin-button"
+              type="button"
+              onClick={() => onStaffChange([...staffMembers, { name: 'New Staff', role: 'Stylist', phone: '04XX XXX XXX', email: 'staff@kbeautysalon.com', status: 'Active' }])}
+            >
+              <Plus size={16} />
+              Add Staff
+            </button>
+            {staffMembers.map((staff, index) => (
+              <div className="admin-item" key={`${staff.email}-${index}`}>
+                <AdminField label="Staff name">
+                  <input value={staff.name} onChange={(event) => updateListItem(staffMembers, index, { ...staff, name: event.target.value }, onStaffChange)} />
+                </AdminField>
+                <AdminField label="Role">
+                  <input value={staff.role} onChange={(event) => updateListItem(staffMembers, index, { ...staff, role: event.target.value }, onStaffChange)} />
+                </AdminField>
+                <AdminField label="Phone">
+                  <input value={staff.phone} onChange={(event) => updateListItem(staffMembers, index, { ...staff, phone: event.target.value }, onStaffChange)} />
+                </AdminField>
+                <AdminField label="Email">
+                  <input value={staff.email} onChange={(event) => updateListItem(staffMembers, index, { ...staff, email: event.target.value }, onStaffChange)} />
+                </AdminField>
+                <AdminField label="Status">
+                  <select value={staff.status} onChange={(event) => updateListItem(staffMembers, index, { ...staff, status: event.target.value }, onStaffChange)}>
+                    <option>Active</option>
+                    <option>Inactive</option>
+                  </select>
                 </AdminField>
               </div>
             ))}
@@ -1203,8 +1461,16 @@ const adminMenuItems: { id: AdminSection; label: string; icon: ReactNode }[] = [
   { id: 'gallery', label: 'Manage Gallery', icon: <Image size={18} /> },
   { id: 'website-details', label: 'Manage Website Details', icon: <Settings size={18} /> },
   { id: 'services', label: 'Manage Service', icon: <Sparkles size={18} /> },
+  { id: 'staff', label: 'Manage Staff', icon: <UserCheck size={18} /> },
   { id: 'reviews', label: 'Client Review', icon: <Star size={18} /> },
   { id: 'vouchers', label: 'Voucher Management', icon: <Gift size={18} /> },
+];
+
+const clientMenuItems: { id: ClientSection; label: string; icon: ReactNode }[] = [
+  { id: 'gallery', label: 'My Gallery', icon: <Camera size={18} /> },
+  { id: 'vouchers', label: 'My Vouchers', icon: <Ticket size={18} /> },
+  { id: 'bookings', label: 'Previous Bookings', icon: <CalendarDays size={18} /> },
+  { id: 'account', label: 'My Account', icon: <UserRound size={18} /> },
 ];
 
 function AdminPanel({ children, icon, title }: { children: ReactNode; icon: ReactNode; title: string }) {
