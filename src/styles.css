@@ -472,16 +472,255 @@ textarea {
   text-align: center;
 }
 
-.gallery-grid {
+.album-grid {
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin: 0 auto;
-  max-width: 1040px;
+  max-width: 1180px;
+  text-align: left;
 }
 
-.gallery-grid img {
+.album-card {
+  background: var(--white);
+  border: 1px solid rgba(63, 109, 95, 0.14);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  cursor: pointer;
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+}
+
+.album-card img {
+  aspect-ratio: 4 / 3;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.album-card span,
+.album-card h3,
+.album-card p,
+.album-card strong {
+  display: block;
+  margin-inline: 18px;
+}
+
+.album-card span {
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin-top: 16px;
+  text-transform: uppercase;
+}
+
+.album-card h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  margin-bottom: 8px;
+  margin-top: 7px;
+}
+
+.album-card p {
+  color: var(--muted);
+  line-height: 1.6;
+  min-height: 78px;
+}
+
+.album-card strong {
+  color: var(--green-dark);
+  margin-bottom: 18px;
+  margin-top: 16px;
+}
+
+.album-page {
+  background:
+    linear-gradient(135deg, rgba(219, 232, 225, 0.72), rgba(247, 245, 239, 0.9)),
+    #f6f7fb;
+  min-height: 100svh;
+  padding: clamp(18px, 4vw, 42px);
+}
+
+.album-hero,
+.album-browser {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  margin: 0 auto;
+  max-width: 1400px;
+}
+
+.album-hero {
+  align-items: center;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
+  min-height: 360px;
+  overflow: hidden;
+  padding: clamp(28px, 6vw, 64px);
+}
+
+.back-button {
+  background: rgba(63, 109, 95, 0.1);
+  border: 0;
+  border-radius: 999px;
+  color: var(--green-dark);
+  cursor: pointer;
+  font-weight: 800;
+  margin-bottom: 28px;
+  min-height: 42px;
+  padding: 0 18px;
+}
+
+.album-hero p {
+  color: var(--gold);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.album-hero h1 {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3rem, 7vw, 6.4rem);
+  font-weight: 400;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.album-hero span {
+  color: var(--muted);
+  display: block;
+  line-height: 1.8;
+  margin-top: 18px;
+  max-width: 520px;
+}
+
+.album-hero-stack {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 330px;
+  position: relative;
+}
+
+.album-hero-stack img {
+  aspect-ratio: 3 / 4;
+  border: 5px solid var(--white);
+  border-radius: 8px;
+  box-shadow: 0 24px 44px rgba(47, 92, 80, 0.18);
+  object-fit: cover;
+  width: min(28vw, 260px);
+}
+
+.album-hero-stack img:nth-child(1) {
+  transform: rotate(-10deg) translateX(42px);
+  z-index: 1;
+}
+
+.album-hero-stack img:nth-child(2) {
+  transform: translateY(-16px);
+  z-index: 2;
+}
+
+.album-hero-stack img:nth-child(3) {
+  transform: rotate(10deg) translateX(-42px);
+  z-index: 1;
+}
+
+.album-browser {
+  display: grid;
+  gap: 28px;
+  grid-template-columns: 260px minmax(0, 1fr);
+  margin-top: 24px;
+  padding: 24px;
+}
+
+.album-sidebar {
+  border-right: 1px solid rgba(63, 109, 95, 0.12);
+  padding-right: 24px;
+}
+
+.album-sidebar img {
   aspect-ratio: 1;
+  border-radius: 8px;
+  display: block;
+  object-fit: cover;
+  width: 80px;
+}
+
+.album-sidebar h2 {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  margin: 18px 0 4px;
+}
+
+.album-sidebar p {
+  color: var(--muted);
+  margin: 0 0 24px;
+}
+
+.album-sidebar nav {
+  display: grid;
+  gap: 8px;
+}
+
+.album-sidebar button,
+.album-toolbar button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--green-dark);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.album-sidebar button.active,
+.album-sidebar button:hover,
+.album-toolbar button:first-child {
+  background: rgba(63, 109, 95, 0.1);
+}
+
+.album-toolbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.album-toolbar h2 {
+  color: var(--ink);
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.album-toolbar div {
+  display: flex;
+  gap: 8px;
+}
+
+.album-photo-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.album-photo-grid img {
+  aspect-ratio: 4 / 3;
   border-radius: 8px;
   display: block;
   object-fit: cover;
@@ -888,7 +1127,9 @@ textarea {
 
   .service-grid,
   .story-section,
-  .booking-section,
+  .album-grid,
+  .album-hero,
+  .album-browser,
   .contact-band,
   .admin-grid,
   .admin-grid.single {
@@ -903,17 +1144,17 @@ textarea {
     position: static;
   }
 
-  .review-grid {
-    grid-template-columns: 1fr;
+  .album-sidebar {
+    border-right: 0;
+    padding-right: 0;
   }
 
-  .story-copy .section-heading,
-  .booking-section .section-heading {
-    text-align: center;
-  }
-
-  .gallery-grid {
+  .album-photo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .story-copy .section-heading {
+    text-align: center;
   }
 
   .contact-band {
@@ -945,14 +1186,13 @@ textarea {
   }
 
   .hero-actions,
-  .trust-row {
+  .album-toolbar {
     align-items: stretch;
     flex-direction: column;
   }
 
   .primary-button,
-  .secondary-link,
-  .trust-row span {
+  .secondary-link {
     width: 100%;
   }
 
@@ -965,8 +1205,17 @@ textarea {
   }
 
   .service-grid,
-  .gallery-grid {
+  .album-grid,
+  .album-photo-grid {
     grid-template-columns: 1fr;
+  }
+
+  .album-hero-stack {
+    min-height: 220px;
+  }
+
+  .album-hero-stack img {
+    width: 42vw;
   }
 
   .admin-row {

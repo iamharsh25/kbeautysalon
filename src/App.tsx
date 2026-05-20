@@ -2,7 +2,6 @@ import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import {
   ArrowRight,
   CalendarDays,
-  Clock,
   Gift,
   Home,
   Image,
@@ -13,11 +12,9 @@ import {
   MessageSquare,
   Plus,
   Settings,
-  ShieldCheck,
   Sparkles,
   Star,
   Trash2,
-  UserRound,
 } from 'lucide-react';
 
 type Service = {
@@ -31,6 +28,13 @@ type GalleryImage = {
   title: string;
   alt: string;
   url: string;
+};
+
+type GalleryAlbum = {
+  title: string;
+  description: string;
+  cover: string;
+  photos: GalleryImage[];
 };
 
 type Booking = {
@@ -125,6 +129,112 @@ const initialGalleryImages: GalleryImage[] = [
   },
 ];
 
+const galleryAlbums: GalleryAlbum[] = [
+  {
+    title: 'Hair style',
+    description: 'Cuts, styling, blow waves, and soft glam hair moments.',
+    cover: '/homepage/salon_1.jpg',
+    photos: [
+      initialGalleryImages[0],
+      initialGalleryImages[1],
+      {
+        title: 'Salon styling',
+        alt: 'A salon hair styling chair',
+        url: '/homepage/salon.jpg',
+      },
+      {
+        title: 'Hair finish',
+        alt: 'A polished hair styling finish',
+        url: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=900&q=80',
+      },
+    ],
+  },
+  {
+    title: 'Nails',
+    description: 'Clean manicures, gel polish, and detail-led nail care.',
+    cover: initialGalleryImages[2].url,
+    photos: [
+      initialGalleryImages[2],
+      {
+        title: 'Nail detail',
+        alt: 'Detailed nail art',
+        url: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        title: 'Polished hands',
+        alt: 'Fresh manicure',
+        url: 'https://images.unsplash.com/photo-1610992015732-2449b76344bc?auto=format&fit=crop&w=900&q=80',
+      },
+    ],
+  },
+  {
+    title: 'Makeup',
+    description: 'Fresh beauty makeup for events, evenings, and everyday polish.',
+    cover: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=900&q=80',
+    photos: [
+      {
+        title: 'Soft glam',
+        alt: 'Soft makeup look',
+        url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        title: 'Makeup brushes',
+        alt: 'Makeup brushes and products',
+        url: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        title: 'Beauty detail',
+        alt: 'A close-up beauty makeup look',
+        url: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=900&q=80',
+      },
+    ],
+  },
+  {
+    title: 'Bridal Make up',
+    description: 'Calm, elegant bridal beauty for ceremony days and celebrations.',
+    cover: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?auto=format&fit=crop&w=900&q=80',
+    photos: [
+      {
+        title: 'Bridal glow',
+        alt: 'Bridal makeup preparation',
+        url: 'https://images.unsplash.com/photo-1594736797933-d0501ba2fe65?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        title: 'Wedding detail',
+        alt: 'Wedding beauty detail',
+        url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        title: 'Bridal styling',
+        alt: 'Bridal hair and makeup styling',
+        url: 'https://images.unsplash.com/photo-1525258946800-98cfd641d0de?auto=format&fit=crop&w=900&q=80',
+      },
+    ],
+  },
+  {
+    title: 'Professional Shoot',
+    description: 'Camera-ready hair and makeup for portraits, shoots, and campaigns.',
+    cover: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=900&q=80',
+    photos: [
+      {
+        title: 'Portrait ready',
+        alt: 'Professional portrait styling',
+        url: 'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        title: 'Studio look',
+        alt: 'Studio beauty styling',
+        url: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80',
+      },
+      {
+        title: 'Campaign glam',
+        alt: 'Glam makeup for photography',
+        url: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=900&q=80',
+      },
+    ],
+  },
+];
+
 const initialBookings: Booking[] = [
   { client: 'Priya Shah', service: 'Hair Styling', time: 'Tomorrow, 10:30 AM', status: 'Confirmed' },
   { client: 'Emma Wilson', service: 'Nails', time: 'Friday, 2:00 PM', status: 'Pending' },
@@ -168,7 +278,7 @@ const initialVouchers: Voucher[] = [
 
 const initialSettings: SiteSettings = {
   heroImage: '/homepage/salon.jpg',
-  instagramUrl: 'https://www.instagram.com/',
+  instagramUrl: 'https://www.instagram.com/kbeautyglamsalon/',
   phone: '04XX XXX XXX',
   email: 'hello@kbeautysalon.com',
   address: 'Your salon address will go here once confirmed.',
@@ -190,7 +300,7 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
             {item}
           </a>
         ))}
-        <a href="#booking">Book Now</a>
+        <a href="#contact-us">Book Now</a>
         <button className="nav-login-button" type="button" onClick={onLoginClick}>Login</button>
       </nav>
 
@@ -209,7 +319,7 @@ function Header({ onLoginClick }: { onLoginClick: () => void }) {
           {[...navItems, 'Book Now'].map((item) => (
             <a
               key={item}
-              href={item === 'Book Now' ? '#booking' : `#${item.toLowerCase().replaceAll(' ', '-')}`}
+              href={item === 'Book Now' ? '#contact-us' : `#${item.toLowerCase().replaceAll(' ', '-')}`}
               onClick={() => setIsMenuOpen(false)}
             >
               {item}
@@ -263,10 +373,10 @@ function Hero({ heroImage }: { heroImage: string }) {
       </div>
       <div className="hero-overlay">
         <p>Beauty Studio</p>
-          <h1>K Beauty Salon</h1>
+        <h1>K Beauty Salon</h1>
         <span>Hair . Beauty . Nails</span>
         <div className="hero-actions">
-          <a className="primary-button" href="#booking">
+          <a className="primary-button" href="#contact-us">
             Book Appointment
             <ArrowRight size={18} />
           </a>
@@ -351,81 +461,98 @@ function FounderStory() {
   );
 }
 
-function BookingPreview() {
-  return (
-    <section className="booking-section" id="booking">
-      <div>
-        <SectionHeading eyebrow="Book Online" title="Ready for mobile-first booking" />
-        <p>
-          The booking page will let clients choose a service, pick a date and time, log in or sign
-          up, and manage upcoming appointments from their phone.
-        </p>
-        <div className="trust-row">
-          <span><ShieldCheck size={18} /> Secure login</span>
-          <span><Clock size={18} /> Time slots</span>
-          <span><UserRound size={18} /> Client profile</span>
-        </div>
-      </div>
-      <form className="booking-card" aria-label="Booking preview form">
-        <label>
-          Service
-          <select defaultValue="Hair Styling">
-            <option>Hair Styling</option>
-            <option>Beauty Treatments</option>
-            <option>Nails</option>
-          </select>
-        </label>
-        <label>
-          Preferred date
-          <input type="date" />
-        </label>
-        <label>
-          Preferred time
-          <input type="time" />
-        </label>
-        <button type="button" className="primary-button full-width">
-          <CalendarDays size={18} />
-          Start Booking
-        </button>
-      </form>
-    </section>
-  );
-}
-
-function ReviewsPreview({ reviews }: { reviews: Review[] }) {
-  const visibleReviews = reviews.filter((review) => review.isVisible);
-
-  return (
-    <section className="section reviews-section">
-      <SectionHeading eyebrow="Client Reviews" title="Kind words from our clients" />
-      <div className="review-grid">
-        {visibleReviews.map((review) => (
-          <article className="review-card" key={review.name}>
-            <div className="star-row" aria-label={`${review.rating} star review`}>
-              {Array.from({ length: review.rating }).map((_, index) => (
-                <Star key={`${review.name}-${index}`} size={17} fill="currentColor" />
-              ))}
-            </div>
-            <p>{review.quote}</p>
-            <span>{review.name}</span>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function GalleryPreview({ galleryImages, instagramUrl }: { galleryImages: GalleryImage[]; instagramUrl: string }) {
+function GalleryPreview({
+  albums,
+  instagramUrl,
+  onAlbumOpen,
+}: {
+  albums: GalleryAlbum[];
+  instagramUrl: string;
+  onAlbumOpen: (album: GalleryAlbum) => void;
+}) {
   return (
     <section className="section gallery-section" id="gallery">
-      <SectionHeading eyebrow="Come On Our Journey" title="@kbeautysalon" />
-      <div className="gallery-grid">
-        {galleryImages.map((image) => (
-          <img key={image.alt} src={image.url} alt={image.alt} loading="lazy" />
+      <SectionHeading eyebrow="Come On Our Journey" title="@kbeautyglamsalon" />
+      <div className="album-grid">
+        {albums.map((album) => (
+          <button className="album-card" key={album.title} type="button" onClick={() => onAlbumOpen(album)}>
+            <img src={album.cover} alt="" loading="lazy" />
+            <span>{album.photos.length} photos</span>
+            <h3>{album.title}</h3>
+            <p>{album.description}</p>
+            <strong>Open Album</strong>
+          </button>
         ))}
       </div>
       <a className="outline-button" href={instagramUrl} target="_blank" rel="noreferrer">View Instagram</a>
     </section>
+  );
+}
+
+function GalleryAlbumPage({
+  album,
+  albums,
+  onBack,
+  onAlbumChange,
+}: {
+  album: GalleryAlbum;
+  albums: GalleryAlbum[];
+  onBack: () => void;
+  onAlbumChange: (album: GalleryAlbum) => void;
+}) {
+  return (
+    <main className="album-page">
+      <section className="album-hero">
+        <div>
+          <button className="back-button" type="button" onClick={onBack}>
+            ← Back to Home
+          </button>
+          <p>Gallery</p>
+          <h1>{album.title}</h1>
+          <span>{album.description}</span>
+        </div>
+        <div className="album-hero-stack" aria-hidden="true">
+          {album.photos.slice(0, 3).map((photo) => (
+            <img key={photo.url} src={photo.url} alt="" />
+          ))}
+        </div>
+      </section>
+
+      <section className="album-browser">
+        <aside className="album-sidebar">
+          <img src={album.cover} alt="" />
+          <h2>{album.title}</h2>
+          <p>{album.photos.length} photos</p>
+          <nav aria-label="Gallery albums">
+            {albums.map((item) => (
+              <button
+                className={item.title === album.title ? 'active' : ''}
+                key={item.title}
+                type="button"
+                onClick={() => onAlbumChange(item)}
+              >
+                <Image size={17} />
+                {item.title}
+              </button>
+            ))}
+          </nav>
+        </aside>
+        <div className="album-photo-area">
+          <div className="album-toolbar">
+            <h2>All Photos</h2>
+            <div>
+              <button type="button">All</button>
+              <button type="button">Images</button>
+            </div>
+          </div>
+          <div className="album-photo-grid">
+            {album.photos.map((photo) => (
+              <img key={photo.url} src={photo.url} alt={photo.alt} loading="lazy" />
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
 
@@ -450,7 +577,8 @@ function ContactBand({ settings }: { settings: SiteSettings }) {
 }
 
 export function App() {
-  const [view, setView] = useState<'public' | 'admin'>('public');
+  const [view, setView] = useState<'public' | 'admin' | 'album'>('public');
+  const [selectedAlbum, setSelectedAlbum] = useState<GalleryAlbum>(galleryAlbums[0]);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [services, setServices] = useState(initialServices);
@@ -460,6 +588,10 @@ export function App() {
   const [reviews, setReviews] = useState(initialReviews);
   const [vouchers, setVouchers] = useState(initialVouchers);
   const [settings, setSettings] = useState(initialSettings);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [view, selectedAlbum.title]);
 
   function handleLogin(email: string, password: string) {
     if (email.toLowerCase() === 'admin@kbeautysalon.com' && password === 'preview123') {
@@ -496,6 +628,17 @@ export function App() {
     );
   }
 
+  if (view === 'album') {
+    return (
+      <GalleryAlbumPage
+        album={selectedAlbum}
+        albums={galleryAlbums}
+        onAlbumChange={setSelectedAlbum}
+        onBack={() => setView('public')}
+      />
+    );
+  }
+
   return (
     <>
       <Header onLoginClick={() => setIsLoginOpen(true)} />
@@ -503,9 +646,14 @@ export function App() {
         <Hero heroImage={settings.heroImage} />
         <ServicesPreview services={services} />
         <FounderStory />
-        <BookingPreview />
-        <ReviewsPreview reviews={reviews} />
-        <GalleryPreview galleryImages={galleryImages} instagramUrl={settings.instagramUrl} />
+        <GalleryPreview
+          albums={galleryAlbums}
+          instagramUrl={settings.instagramUrl}
+          onAlbumOpen={(album) => {
+            setSelectedAlbum(album);
+            setView('album');
+          }}
+        />
       </main>
       <ContactBand settings={settings} />
       {isLoginOpen ? (
