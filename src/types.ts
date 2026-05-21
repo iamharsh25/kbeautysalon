@@ -14,6 +14,15 @@ export type Service = {
   displayOrder?: number;
 };
 
+export type ServiceCategory = {
+  id?: string;
+  name: string;
+  subCategories: Array<{
+    id?: string;
+    name: string;
+  }>;
+};
+
 export type GalleryImage = {
   title: string;
   alt: string;

@@ -2542,7 +2542,10 @@ textarea {
   align-items: end;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
+}
+
+.category-create-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
 .category-list {
@@ -2553,6 +2556,48 @@ textarea {
 .category-row {
   border-top: 1px solid rgba(63, 109, 95, 0.12);
   padding-top: 14px;
+}
+
+.category-row-header {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sub-category-manager {
+  background: #fbfaf7;
+  border: 1px solid rgba(63, 109, 95, 0.1);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.sub-category-manager > strong {
+  color: var(--green-dark);
+}
+
+.sub-category-manager > span {
+  color: var(--muted);
+}
+
+.sub-category-row,
+.sub-category-add-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sub-category-row input,
+.sub-category-add-row input {
+  background: var(--white);
+  border: 1px solid rgba(63, 109, 95, 0.16);
+  border-radius: 8px;
+  color: var(--ink);
+  min-height: 42px;
+  padding: 0 12px;
 }
 
 .customer-list-actions {
@@ -3035,6 +3080,9 @@ textarea {
   .service-price-grid,
   .category-create-row,
   .category-row,
+  .category-row-header,
+  .sub-category-row,
+  .sub-category-add-row,
   .customer-create-form,
   .customer-edit-card,
   .customer-edit-grid,

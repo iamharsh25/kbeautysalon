@@ -36,14 +36,12 @@ const categoryMeta: Record<string, { accent: ServiceCategoryGroup['accent']; ico
   },
 };
 
-const fallbackCategories = ['Hair Style', 'Make Up', 'Nails', 'Beauty Treatments'];
-
 function normalizeServiceForCatalog(service: Service, index: number): Service {
-  const category = service.category || fallbackCategories[index % fallbackCategories.length];
+  const category = service.category || 'Other';
   return {
     ...service,
     category,
-    subCategory: service.subCategory || (category === 'Hair Style' ? "Women's Services" : ''),
+    subCategory: service.subCategory || 'Services',
     isActive: service.isActive ?? true,
     displayOrder: service.displayOrder ?? index,
   };
@@ -55,10 +53,7 @@ export function getServiceCategoryGroups(services: Service[]) {
     .filter((service) => service.isActive)
     .sort((firstService, secondService) => (firstService.displayOrder ?? 0) - (secondService.displayOrder ?? 0));
 
-  const categoryNames = Array.from(new Set([
-    ...fallbackCategories,
-    ...activeServices.map((service) => service.category || 'Other'),
-  ]));
+  const categoryNames = Array.from(new Set(activeServices.map((service) => service.category || 'Other')));
 
   return categoryNames.map((name, index) => {
     const categoryServices = activeServices.filter((service) => service.category === name);

@@ -1,4 +1,4 @@
-import type { Booking, ClientPhoto, ClientProfile, Customer, GalleryAlbum, GalleryImage, HomePageImage, Lead, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
+import type { Booking, ClientPhoto, ClientProfile, Customer, GalleryAlbum, GalleryImage, HomePageImage, Lead, Review, Service, ServiceCategory, SiteSettings, StaffMember, Voucher } from '../types';
 
 export const navItems = ['Home', 'About Us', 'Services', 'Gallery', 'Contact Us'];
 
@@ -21,6 +21,13 @@ export const initialServices: Service[] = [
     price: 'From ₹900',
     image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=900&q=80',
   },
+];
+
+export const initialServiceCategories: ServiceCategory[] = [
+  { name: 'Hair Style', subCategories: [{ name: "Men's Services" }, { name: "Women's Services" }] },
+  { name: 'Make Up', subCategories: [{ name: 'Everyday Makeup' }, { name: 'Party Makeup' }, { name: 'Bridal Makeup' }] },
+  { name: 'Nails', subCategories: [{ name: 'Manicure & Pedicure' }, { name: 'Nail Enhancements' }, { name: 'Nail Art' }] },
+  { name: 'Beauty Treatments', subCategories: [{ name: 'Facial Treatments' }, { name: 'Skin Treatments' }, { name: 'Body Treatments' }] },
 ];
 
 export const bookingServices = [

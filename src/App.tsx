@@ -9,6 +9,7 @@ import {
   initialGalleryImages,
   initialHomePageImages,
   initialReviews,
+  initialServiceCategories,
   initialServices,
   initialSettings,
   initialStaff,
@@ -24,8 +25,9 @@ import { ServicesPage } from './pages/ServicesPage';
 import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
 import { deleteHomePageImage, getHomePageImages, reorderHomePageImages, uploadHomePageImages } from './services/homePageService';
 import { getSalonSettings, updateSalonSettings, uploadSalonLogo } from './services/salonSettingsService';
+import { getServiceCategories, saveServiceCategories } from './services/serviceCategoryService';
 import { createServiceMenuItem, deleteServiceMenuItem, getServiceMenu, updateServiceMenuItem } from './services/serviceMenuService';
-import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, Service, SiteSettings } from './types';
+import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, Service, ServiceCategory, SiteSettings } from './types';
 
 function albumSlug(album: GalleryAlbum) {
   return album.title
@@ -39,7 +41,8 @@ export function App() {
   const navigate = useNavigate();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [services, setServices] = useState(initialServices);
+  const [services, setServices] = useState(() => isSupabaseConfigured ? [] : initialServices);
+  const [serviceCategories, setServiceCategories] = useState(() => isSupabaseConfigured ? [] : initialServiceCategories);
   const [galleryImages, setGalleryImages] = useState(initialGalleryImages);
   const [bookings, setBookings] = useState(initialBookings);
   const [customers, setCustomers] = useState(() => isSupabaseConfigured ? [] : initialCustomers);
@@ -93,11 +96,26 @@ export function App() {
 
       try {
         const databaseServices = await getServiceMenu();
-        if (databaseServices.length && isMounted) {
+        if (isMounted) {
           setServices(databaseServices);
         }
       } catch (error) {
         console.error('Services could not be loaded.', error);
+        if (isMounted) {
+          setServices([]);
+        }
+      }
+
+      try {
+        const databaseServiceCategories = await getServiceCategories();
+        if (isMounted) {
+          setServiceCategories(databaseServiceCategories);
+        }
+      } catch (error) {
+        console.error('Service categories could not be loaded.', error);
+        if (isMounted) {
+          setServiceCategories([]);
+        }
       }
 
       const { data: userData } = await supabase.auth.getUser();
@@ -207,6 +225,12 @@ export function App() {
   async function handleServiceDelete(service: Service, index: number) {
     await deleteServiceMenuItem(service);
     setServices((currentServices) => currentServices.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  async function handleServiceCategoriesSave(categories: ServiceCategory[]) {
+    const savedCategories = await saveServiceCategories(categories);
+    setServiceCategories(savedCategories);
+    return savedCategories;
   }
 
   async function handleLogin(email: string, password: string) {
@@ -319,6 +343,7 @@ export function App() {
                 homePageImages={homePageImages}
                 reviews={reviews}
                 services={services}
+                serviceCategories={serviceCategories}
                 staffMembers={staffMembers}
                 settings={settings}
                 vouchers={vouchers}
@@ -339,6 +364,8 @@ export function App() {
                 onServiceCreate={handleServiceCreate}
                 onServiceDelete={handleServiceDelete}
                 onServiceUpdate={handleServiceUpdate}
+                onServiceCategoriesChange={setServiceCategories}
+                onServiceCategoriesSave={handleServiceCategoriesSave}
                 onStaffChange={setStaffMembers}
                 onSettingsChange={handleSettingsChange}
                 onVoucherChange={setVouchers}

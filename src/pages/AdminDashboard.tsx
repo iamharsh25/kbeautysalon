@@ -2,7 +2,7 @@ import { useEffect, useState, type ChangeEvent, type DragEvent, type FormEvent, 
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, Palette, Pencil, Plus, Save, Search, Settings, Sparkles, Star, Tags, Trash2, UploadCloud, UserCheck, UsersRound, X } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
-import type { AdminSection, Booking, Customer, CustomerVoucher, GalleryImage, HomePageImage, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
+import type { AdminSection, Booking, Customer, CustomerVoucher, GalleryImage, HomePageImage, Review, Service, ServiceCategory, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
 import { updateListItem } from '../utils/list';
 import { formatCurrency, formatDisplayDate } from '../utils/format';
@@ -14,19 +14,7 @@ type ConfirmDialogState = {
   onConfirm: () => void;
 };
 
-type ServiceCategory = {
-  name: string;
-  subCategories: string[];
-};
-
 const SERVICES_PER_PAGE = 10;
-const defaultServiceCategories: ServiceCategory[] = [
-  { name: 'Hair Style', subCategories: ['Hair Cut', 'Hair Wash', 'Hair Smoothing'] },
-  { name: 'Make Up', subCategories: ['Occasion', 'Bridal', 'Party'] },
-  { name: 'Nails', subCategories: ['Manicure', 'Gel Nails', 'Nail Art'] },
-  { name: 'Beauty Treatments', subCategories: ['Facial', 'Brows', 'Korean Treatment'] },
-  { name: 'Professional Shoot', subCategories: ['Makeup', 'Hair Styling'] },
-];
 
 export function AdminDashboard({
   adminFullName,
@@ -36,6 +24,7 @@ export function AdminDashboard({
   homePageImages,
   reviews,
   services,
+  serviceCategories,
   staffMembers,
   settings,
   vouchers,
@@ -56,6 +45,8 @@ export function AdminDashboard({
   onServiceCreate,
   onServiceDelete,
   onServiceUpdate,
+  onServiceCategoriesChange,
+  onServiceCategoriesSave,
   onStaffChange,
   onSettingsChange,
   onVoucherChange,
@@ -67,6 +58,7 @@ export function AdminDashboard({
   homePageImages: HomePageImage[];
   reviews: Review[];
   services: Service[];
+  serviceCategories: ServiceCategory[];
   staffMembers: StaffMember[];
   settings: SiteSettings;
   vouchers: Voucher[];
@@ -87,6 +79,8 @@ export function AdminDashboard({
   onServiceCreate: (service: Service) => Service | Promise<Service>;
   onServiceDelete: (service: Service, index: number) => void | Promise<void>;
   onServiceUpdate: (service: Service, index: number) => Service | Promise<Service>;
+  onServiceCategoriesChange: (categories: ServiceCategory[]) => void;
+  onServiceCategoriesSave: (categories: ServiceCategory[]) => ServiceCategory[] | Promise<ServiceCategory[]>;
   onStaffChange: (staffMembers: StaffMember[]) => void;
   onSettingsChange: (settings: SiteSettings) => void | Promise<void>;
   onVoucherChange: (vouchers: Voucher[]) => void;
@@ -113,9 +107,9 @@ export function AdminDashboard({
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [servicePage, setServicePage] = useState(1);
-  const [serviceCategories, setServiceCategories] = useState(defaultServiceCategories);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategorySubCategories, setNewCategorySubCategories] = useState('');
+  const [newSubCategoryNames, setNewSubCategoryNames] = useState<Record<number, string>>({});
+  const [categoryStatus, setCategoryStatus] = useState('');
   const navigate = useNavigate();
   const { adminSection, customerId } = useParams();
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
@@ -158,23 +152,6 @@ export function AdminDashboard({
   useEffect(() => {
     setServicePage(1);
   }, [serviceSearch, serviceCategoryFilter]);
-
-  useEffect(() => {
-    setServiceCategories((currentCategories) => {
-      const nextCategories = [...currentCategories];
-      for (const service of services) {
-        const categoryName = service.category || 'Hair Style';
-        const subCategoryName = service.subCategory || '';
-        const category = nextCategories.find((item) => item.name === categoryName);
-        if (!category) {
-          nextCategories.push({ name: categoryName, subCategories: subCategoryName ? [subCategoryName] : [] });
-        } else if (subCategoryName && !category.subCategories.includes(subCategoryName)) {
-          category.subCategories = [...category.subCategories, subCategoryName];
-        }
-      }
-      return nextCategories;
-    });
-  }, [services]);
 
   useEffect(() => {
     const isValidSection = adminMenuItems.some((item) => item.id === adminSection);
@@ -524,14 +501,14 @@ export function AdminDashboard({
   }
 
   function handleAddService() {
-    const firstCategory = serviceCategories[0] ?? defaultServiceCategories[0];
+    const firstCategory = serviceCategories[0] ?? { name: 'General', subCategories: [] };
     const nextService = normalizeAdminService({
       title: 'New Service',
       description: 'Short service description.',
       price: '₹0',
       image: homePageImages[0]?.url ?? settings.heroImage,
       category: firstCategory.name,
-      subCategory: firstCategory.subCategories[0] ?? '',
+      subCategory: firstCategory.subCategories[0]?.name ?? '',
       serviceType: 'Fixed Price',
       fixedPrice: 0,
       minPrice: 0,
@@ -579,20 +556,20 @@ export function AdminDashboard({
   function handleAddCategory() {
     const name = newCategoryName.trim();
     if (!name || serviceCategories.some((category) => category.name.toLowerCase() === name.toLowerCase())) return;
-    setServiceCategories([
+    onServiceCategoriesChange([
       ...serviceCategories,
       {
         name,
-        subCategories: parseSubCategories(newCategorySubCategories),
+        subCategories: [],
       },
     ]);
     setNewCategoryName('');
-    setNewCategorySubCategories('');
+    setCategoryStatus('Category added. Click Save Categories to publish.');
   }
 
   function updateCategoryName(categoryIndex: number, nextName: string) {
     const previousName = serviceCategories[categoryIndex]?.name;
-    setServiceCategories(serviceCategories.map((category, index) => index === categoryIndex ? { ...category, name: nextName } : category));
+    onServiceCategoriesChange(serviceCategories.map((category, index) => index === categoryIndex ? { ...category, name: nextName } : category));
     if (!previousName || !nextName.trim()) return;
     const updatedServices = services.map((service) => service.category === previousName ? { ...service, category: nextName } : service);
     onServiceChange(updatedServices);
@@ -601,11 +578,50 @@ export function AdminDashboard({
     });
   }
 
-  function updateCategorySubCategories(categoryIndex: number, value: string) {
-    setServiceCategories(serviceCategories.map((category, index) => index === categoryIndex ? {
+  function addSubCategory(categoryIndex: number) {
+    const name = (newSubCategoryNames[categoryIndex] ?? '').trim();
+    const category = serviceCategories[categoryIndex];
+    if (!name || !category || category.subCategories.some((subCategory) => subCategory.name.toLowerCase() === name.toLowerCase())) return;
+    onServiceCategoriesChange(serviceCategories.map((item, index) => index === categoryIndex ? {
+      ...item,
+      subCategories: [...item.subCategories, { name }],
+    } : item));
+    setNewSubCategoryNames({ ...newSubCategoryNames, [categoryIndex]: '' });
+    setCategoryStatus('Sub category added. Click Save Categories to publish.');
+  }
+
+  function updateSubCategory(categoryIndex: number, subCategoryIndex: number, name: string) {
+    onServiceCategoriesChange(serviceCategories.map((category, index) => index === categoryIndex ? {
       ...category,
-      subCategories: parseSubCategories(value),
+      subCategories: category.subCategories.map((subCategory, itemIndex) => itemIndex === subCategoryIndex ? { ...subCategory, name } : subCategory),
     } : category));
+  }
+
+  function deleteSubCategory(categoryIndex: number, subCategoryIndex: number) {
+    const category = serviceCategories[categoryIndex];
+    const subCategory = category?.subCategories[subCategoryIndex];
+    if (!category || !subCategory) return;
+    const linkedServices = services.filter((service) => service.category === category.name && service.subCategory === subCategory.name);
+
+    requestConfirmation({
+      title: 'Delete sub category?',
+      message: linkedServices.length
+        ? `Deleting "${subCategory.name}" will also delete ${linkedServices.length} linked service${linkedServices.length === 1 ? '' : 's'}.`
+        : `This will delete "${subCategory.name}" from ${category.name}.`,
+      confirmLabel: linkedServices.length ? 'Delete Sub Category and Services' : 'Delete Sub Category',
+      onConfirm: () => {
+        linkedServices.forEach((service) => {
+          const serviceIndex = findServiceIndex(services, service);
+          void onServiceDelete(service, serviceIndex);
+        });
+        onServiceChange(services.filter((service) => !(service.category === category.name && service.subCategory === subCategory.name)));
+        onServiceCategoriesChange(serviceCategories.map((item, index) => index === categoryIndex ? {
+          ...item,
+          subCategories: item.subCategories.filter((_, itemIndex) => itemIndex !== subCategoryIndex),
+        } : item));
+        setCategoryStatus('Sub category deleted. Click Save Categories to publish.');
+      },
+    });
   }
 
   function handleDeleteCategory(categoryIndex: number) {
@@ -626,8 +642,9 @@ export function AdminDashboard({
           void onServiceDelete(service, index);
         });
         onServiceChange(services.filter((service) => service.category !== category.name));
-        setServiceCategories(serviceCategories.filter((_, index) => index !== categoryIndex));
+        onServiceCategoriesChange(serviceCategories.filter((_, index) => index !== categoryIndex));
         if (serviceCategoryFilter === category.name) setServiceCategoryFilter('All Categories');
+        setCategoryStatus('Category deleted. Click Save Categories to publish.');
       },
     });
   }
@@ -636,8 +653,19 @@ export function AdminDashboard({
     const category = serviceCategories.find((item) => item.name === categoryName);
     updateServiceDraft({
       category: categoryName,
-      subCategory: category?.subCategories[0] ?? '',
+      subCategory: category?.subCategories[0]?.name ?? '',
     });
+  }
+
+  async function handleSaveCategories() {
+    setCategoryStatus('Saving categories...');
+    try {
+      const savedCategories = await onServiceCategoriesSave(serviceCategories);
+      onServiceCategoriesChange(savedCategories);
+      setCategoryStatus('Categories saved.');
+    } catch (error) {
+      setCategoryStatus(error instanceof Error ? error.message : 'Categories could not be saved.');
+    }
   }
 
   return (
@@ -1486,7 +1514,7 @@ export function AdminDashboard({
                     <select value={serviceDraft.subCategory ?? ''} onChange={(event) => updateServiceDraft({ subCategory: event.target.value })}>
                       <option value="">No sub category</option>
                       {selectedServiceSubCategories.map((subCategory) => (
-                        <option key={subCategory}>{subCategory}</option>
+                        <option key={subCategory.name}>{subCategory.name}</option>
                       ))}
                     </select>
                   </AdminField>
@@ -1561,31 +1589,50 @@ export function AdminDashboard({
               <AdminField label="Category Name">
                 <input value={newCategoryName} placeholder="Category name" onChange={(event) => setNewCategoryName(event.target.value)} />
               </AdminField>
-              <AdminField label="Sub Categories">
-                <input value={newCategorySubCategories} placeholder="Cut, Colour, Styling" onChange={(event) => setNewCategorySubCategories(event.target.value)} />
-              </AdminField>
               <button className="small-admin-button" type="button" onClick={handleAddCategory}>
                 <Plus size={16} />
                 Add Category
               </button>
+              <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleSaveCategories}>
+                <Save size={16} />
+                Save Categories
+              </button>
             </div>
+            {categoryStatus ? <p className="admin-status-text">{categoryStatus}</p> : null}
             <div className="category-list">
               {serviceCategories.map((category, index) => (
                 <div className="category-row" key={`${category.name}-${index}`}>
-                  <AdminField label="Category">
-                    <input value={category.name} onChange={(event) => updateCategoryName(index, event.target.value)} />
-                  </AdminField>
-                  <AdminField label="Sub Categories">
-                    <input
-                      value={category.subCategories.join(', ')}
-                      placeholder="Sub categories separated by comma"
-                      onChange={(event) => updateCategorySubCategories(index, event.target.value)}
-                    />
-                  </AdminField>
-                  <button className="danger-admin-button" type="button" onClick={() => handleDeleteCategory(index)}>
-                    <Trash2 size={16} />
-                    Delete
-                  </button>
+                  <div className="category-row-header">
+                    <AdminField label="Category">
+                      <input value={category.name} onChange={(event) => updateCategoryName(index, event.target.value)} />
+                    </AdminField>
+                    <button className="danger-admin-button" type="button" onClick={() => handleDeleteCategory(index)}>
+                      <Trash2 size={16} />
+                      Delete Category
+                    </button>
+                  </div>
+                  <div className="sub-category-manager">
+                    <strong>Sub Categories</strong>
+                    {category.subCategories.length ? category.subCategories.map((subCategory, subCategoryIndex) => (
+                      <div className="sub-category-row" key={`${category.name}-${subCategory.name}-${subCategoryIndex}`}>
+                        <input value={subCategory.name} onChange={(event) => updateSubCategory(index, subCategoryIndex, event.target.value)} />
+                        <button className="icon-admin-button danger" type="button" aria-label={`Delete ${subCategory.name}`} onClick={() => deleteSubCategory(index, subCategoryIndex)}>
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    )) : <span>No sub categories yet.</span>}
+                    <div className="sub-category-add-row">
+                      <input
+                        value={newSubCategoryNames[index] ?? ''}
+                        placeholder="Add sub category"
+                        onChange={(event) => setNewSubCategoryNames({ ...newSubCategoryNames, [index]: event.target.value })}
+                      />
+                      <button className="small-admin-button" type="button" onClick={() => addSubCategory(index)}>
+                        <Plus size={16} />
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1748,11 +1795,4 @@ function normalizeAdminService(service: Service, fallbackOrder = 0): Service {
     isActive: service.isActive ?? true,
     displayOrder: service.displayOrder ?? fallbackOrder,
   };
-}
-
-function parseSubCategories(value: string) {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
