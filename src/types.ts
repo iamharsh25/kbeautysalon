@@ -1,8 +1,16 @@
 export type Service = {
+  id?: string;
   title: string;
   description: string;
   price: string;
   image: string;
+  category?: string;
+  serviceType?: 'Fixed Price' | 'Price Range' | 'Contact for Price';
+  fixedPrice?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  isActive?: boolean;
+  displayOrder?: number;
 };
 
 export type GalleryImage = {

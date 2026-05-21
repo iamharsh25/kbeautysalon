@@ -23,7 +23,8 @@ import { HomePage } from './pages/HomePage';
 import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
 import { deleteHomePageImage, getHomePageImages, reorderHomePageImages, uploadHomePageImages } from './services/homePageService';
 import { getSalonSettings, updateSalonSettings } from './services/salonSettingsService';
-import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, SiteSettings } from './types';
+import { createServiceMenuItem, deleteServiceMenuItem, getServiceMenu, updateServiceMenuItem } from './services/serviceMenuService';
+import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, Service, SiteSettings } from './types';
 
 function albumSlug(album: GalleryAlbum) {
   return album.title
@@ -87,6 +88,15 @@ export function App() {
         if (isMounted) {
           setCustomers([]);
         }
+      }
+
+      try {
+        const databaseServices = await getServiceMenu();
+        if (databaseServices.length && isMounted) {
+          setServices(databaseServices);
+        }
+      } catch (error) {
+        console.error('Services could not be loaded.', error);
       }
 
       const { data: userData } = await supabase.auth.getUser();
@@ -175,6 +185,23 @@ export function App() {
         vouchers: customer.vouchers.filter((_, index) => index !== voucherIndex),
       };
     }));
+  }
+
+  async function handleServiceCreate(service: Service) {
+    const createdService = await createServiceMenuItem(service);
+    setServices((currentServices) => [...currentServices, createdService]);
+    return createdService;
+  }
+
+  async function handleServiceUpdate(service: Service, index: number) {
+    const updatedService = await updateServiceMenuItem(service);
+    setServices((currentServices) => currentServices.map((item, itemIndex) => itemIndex === index ? updatedService : item));
+    return updatedService;
+  }
+
+  async function handleServiceDelete(service: Service, index: number) {
+    await deleteServiceMenuItem(service);
+    setServices((currentServices) => currentServices.filter((_, itemIndex) => itemIndex !== index));
   }
 
   async function handleLogin(email: string, password: string) {
@@ -290,6 +317,9 @@ export function App() {
                 onLogout={goHome}
                 onReviewChange={setReviews}
                 onServiceChange={setServices}
+                onServiceCreate={handleServiceCreate}
+                onServiceDelete={handleServiceDelete}
+                onServiceUpdate={handleServiceUpdate}
                 onStaffChange={setStaffMembers}
                 onSettingsChange={handleSettingsChange}
                 onVoucherChange={setVouchers}

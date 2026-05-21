@@ -38,6 +38,9 @@ export function AdminDashboard({
   onLogout,
   onReviewChange,
   onServiceChange,
+  onServiceCreate,
+  onServiceDelete,
+  onServiceUpdate,
   onStaffChange,
   onSettingsChange,
   onVoucherChange,
@@ -65,6 +68,9 @@ export function AdminDashboard({
   onLogout: () => void;
   onReviewChange: (reviews: Review[]) => void;
   onServiceChange: (services: Service[]) => void;
+  onServiceCreate: (service: Service) => Service | Promise<Service>;
+  onServiceDelete: (service: Service, index: number) => void | Promise<void>;
+  onServiceUpdate: (service: Service, index: number) => Service | Promise<Service>;
   onStaffChange: (staffMembers: StaffMember[]) => void;
   onSettingsChange: (settings: SiteSettings) => void | Promise<void>;
   onVoucherChange: (vouchers: Voucher[]) => void;
@@ -84,6 +90,10 @@ export function AdminDashboard({
   const [voucherToAssign, setVoucherToAssign] = useState(vouchers.find((voucher) => voucher.status === 'Active')?.code ?? vouchers[0]?.code ?? '');
   const [voucherStartDate, setVoucherStartDate] = useState('2026-05-21');
   const [voucherExpiryDate, setVoucherExpiryDate] = useState('2026-08-21');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All Categories');
+  const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null);
+  const [serviceDraft, setServiceDraft] = useState<Service | null>(null);
   const navigate = useNavigate();
   const { adminSection, customerId } = useParams();
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
@@ -96,6 +106,20 @@ export function AdminDashboard({
       .toLowerCase()
       .includes(normalizedCustomerSearch);
   });
+  const serviceCategories = ['All Categories', ...Array.from(new Set(services.map((service) => service.category || 'General')))];
+  const normalizedServiceSearch = serviceSearch.trim().toLowerCase();
+  const normalizedServices = services
+    .map((service, index) => normalizeAdminService(service, index))
+    .sort((firstService, secondService) => (firstService.displayOrder ?? 0) - (secondService.displayOrder ?? 0));
+  const filteredServices = normalizedServices.filter((service) => {
+    const matchesCategory = serviceCategoryFilter === 'All Categories' || service.category === serviceCategoryFilter;
+    const matchesSearch = !normalizedServiceSearch
+      || [service.title, service.category, service.description].join(' ').toLowerCase().includes(normalizedServiceSearch);
+    return matchesCategory && matchesSearch;
+  });
+  const activeServiceCount = normalizedServices.filter((service) => service.isActive).length;
+  const rangeServiceCount = normalizedServices.filter((service) => service.serviceType === 'Price Range').length;
+  const contactServiceCount = normalizedServices.filter((service) => service.serviceType === 'Contact for Price').length;
   const homeSettings = isEditingHomePage ? homeSettingsDraft : settings;
 
   useEffect(() => {
@@ -421,8 +445,62 @@ export function AdminDashboard({
       title: 'Delete service?',
       message: `This will remove "${service.title}" from the service menu.`,
       confirmLabel: 'Delete Service',
-      onConfirm: () => onServiceChange(services.filter((_, itemIndex) => itemIndex !== index)),
+      onConfirm: () => {
+        void onServiceDelete(service, index);
+        onServiceChange(services.filter((_, itemIndex) => itemIndex !== index));
+        if (editingServiceIndex === index) {
+          setEditingServiceIndex(null);
+          setServiceDraft(null);
+        }
+      },
     });
+  }
+
+  function handleAddService() {
+    const nextService = normalizeAdminService({
+      title: 'New Service',
+      description: 'Short service description.',
+      price: '₹0',
+      image: homePageImages[0]?.url ?? settings.heroImage,
+      category: 'Hair Style',
+      serviceType: 'Fixed Price',
+      fixedPrice: 0,
+      minPrice: 0,
+      maxPrice: 0,
+      isActive: true,
+      displayOrder: services.length + 1,
+    }, services.length);
+    setEditingServiceIndex(services.length);
+    setServiceDraft(nextService);
+  }
+
+  function handleEditService(service: Service) {
+    const index = findServiceIndex(services, service);
+    setEditingServiceIndex(index >= 0 ? index : null);
+    setServiceDraft({ ...service });
+  }
+
+  function updateServiceDraft(patch: Partial<Service>) {
+    setServiceDraft((currentDraft) => currentDraft ? normalizeAdminService({ ...currentDraft, ...patch }, editingServiceIndex ?? services.length) : currentDraft);
+  }
+
+  async function handleServiceSave() {
+    if (!serviceDraft) return;
+    const normalizedService = normalizeAdminService(serviceDraft, editingServiceIndex ?? services.length);
+    if (editingServiceIndex === services.length || editingServiceIndex === null || !services[editingServiceIndex]) {
+      const createdService = await onServiceCreate(normalizedService);
+      onServiceChange([...services, createdService]);
+    } else {
+      const updatedService = await onServiceUpdate(normalizedService, editingServiceIndex);
+      onServiceChange(services.map((service, index) => index === editingServiceIndex ? updatedService : service));
+    }
+    setEditingServiceIndex(null);
+    setServiceDraft(null);
+  }
+
+  function handleServiceCancel() {
+    setEditingServiceIndex(null);
+    setServiceDraft(null);
   }
 
   return (
@@ -1079,42 +1157,159 @@ export function AdminDashboard({
         ) : null}
 
         {activeSection === 'services' ? (
-          <AdminPanel icon={<Sparkles size={20} />} title="Manage services">
-            <button
-              className="small-admin-button"
-              type="button"
-              onClick={() => onServiceChange([...services, { title: 'New Service', description: 'Service description', price: 'From ₹0', image: homePageImages[0]?.url ?? settings.heroImage }])}
-            >
-              <Plus size={16} />
-              Add Service
-            </button>
-            {services.map((service, index) => (
-              <div className="admin-item" key={`${service.title}-${index}`}>
-                <AdminField label="Service name">
-                  <input
-                    value={service.title}
-                    onChange={(event) => updateListItem(services, index, { ...service, title: event.target.value }, onServiceChange)}
-                  />
-                </AdminField>
-                <AdminField label="Description">
-                  <textarea
-                    value={service.description}
-                    onChange={(event) => updateListItem(services, index, { ...service, description: event.target.value }, onServiceChange)}
-                  />
-                </AdminField>
-                <AdminField label="Price">
-                  <input
-                    value={service.price}
-                    onChange={(event) => updateListItem(services, index, { ...service, price: event.target.value }, onServiceChange)}
-                  />
-                </AdminField>
-                <button className="danger-admin-button" type="button" onClick={() => handleDeleteService(index, service)}>
-                  <Trash2 size={16} />
-                  Delete
-                </button>
+          <div className="services-admin-workspace">
+            <div className="services-admin-header">
+              <div>
+                <h2>Services</h2>
+                <span>Dashboard / Services</span>
               </div>
-            ))}
-          </AdminPanel>
+              <button className="small-admin-button" type="button" onClick={handleAddService}>
+                <Plus size={16} />
+                Add Service
+              </button>
+            </div>
+
+            <div className="service-stats-grid">
+              <div><span>Total Services</span><strong>{normalizedServices.length}</strong><small>All services added</small></div>
+              <div><span>Active Services</span><strong>{activeServiceCount}</strong><small>Currently visible</small></div>
+              <div><span>Price Range Services</span><strong>{rangeServiceCount}</strong><small>Have price range</small></div>
+              <div><span>Contact for Price</span><strong>{contactServiceCount}</strong><small>Require contact</small></div>
+            </div>
+
+            <AdminPanel icon={<Sparkles size={20} />} title="Services List">
+              <div className="service-table-toolbar">
+                <span>Manage your salon services and pricing.</span>
+                <div>
+                  <select value={serviceCategoryFilter} onChange={(event) => setServiceCategoryFilter(event.target.value)}>
+                    {serviceCategories.map((category) => <option key={category}>{category}</option>)}
+                  </select>
+                  <label className="service-search-field">
+                    <Search size={18} />
+                    <input value={serviceSearch} placeholder="Search services..." onChange={(event) => setServiceSearch(event.target.value)} />
+                  </label>
+                </div>
+              </div>
+              <div className="customer-table-wrap">
+                <table className="customer-data-table service-data-table">
+                  <thead>
+                    <tr>
+                      <th>Service</th>
+                      <th>Category</th>
+                      <th>Price</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredServices.length ? filteredServices.map((service) => {
+                      const serviceIndex = findServiceIndex(services, service);
+                      return (
+                        <tr key={`${service.title}-${service.id ?? serviceIndex}`}>
+                          <td>
+                            <span className="service-name-cell">
+                              <img src={service.image} alt="" />
+                              <span>
+                                <strong>{service.title}</strong>
+                                <small>{service.category}</small>
+                              </span>
+                            </span>
+                          </td>
+                          <td>{service.category}</td>
+                          <td>{service.price}</td>
+                          <td>{service.serviceType}</td>
+                          <td><span className={service.isActive ? 'status-pill' : 'status-pill used'}>{service.isActive ? 'Active' : 'Inactive'}</span></td>
+                          <td>
+                            <div className="service-action-buttons">
+                              <button className="icon-admin-button" type="button" aria-label={`Edit ${service.title}`} onClick={() => handleEditService(service)}>
+                                <Settings size={16} />
+                              </button>
+                              <button className="icon-admin-button danger" type="button" aria-label={`Delete ${service.title}`} onClick={() => handleDeleteService(serviceIndex, service)}>
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }) : (
+                      <tr><td colSpan={6}>No services match your filters.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </AdminPanel>
+
+            {serviceDraft ? (
+              <AdminPanel icon={<Settings size={20} />} title={editingServiceIndex === services.length ? 'Add Service' : 'Edit Service'}>
+                <div className="service-editor-grid">
+                  <div className="service-editor-main">
+                    <AdminField label="Service Name">
+                      <input value={serviceDraft.title} onChange={(event) => updateServiceDraft({ title: event.target.value })} />
+                    </AdminField>
+                    <AdminField label="Category">
+                      <select value={serviceDraft.category} onChange={(event) => updateServiceDraft({ category: event.target.value })}>
+                        {['Hair Style', 'Make Up', 'Nails', 'Beauty Treatments', 'Bridal Makeup', 'Professional Shoot'].map((category) => (
+                          <option key={category}>{category}</option>
+                        ))}
+                      </select>
+                    </AdminField>
+                    <div className="service-type-group">
+                      <span>Service Type</span>
+                      {(['Fixed Price', 'Price Range', 'Contact for Price'] as Service['serviceType'][]).map((serviceType) => (
+                        <label key={serviceType}>
+                          <input
+                            checked={serviceDraft.serviceType === serviceType}
+                            name="serviceType"
+                            type="radio"
+                            onChange={() => updateServiceDraft({ serviceType })}
+                          />
+                          {serviceType}
+                        </label>
+                      ))}
+                    </div>
+                    {serviceDraft.serviceType === 'Price Range' ? (
+                      <div className="service-price-grid">
+                        <AdminField label="Minimum Price (₹)">
+                          <input min="0" type="number" value={serviceDraft.minPrice ?? 0} onChange={(event) => updateServiceDraft({ minPrice: Number(event.target.value) })} />
+                        </AdminField>
+                        <AdminField label="Maximum Price (₹)">
+                          <input min="0" type="number" value={serviceDraft.maxPrice ?? 0} onChange={(event) => updateServiceDraft({ maxPrice: Number(event.target.value) })} />
+                        </AdminField>
+                      </div>
+                    ) : serviceDraft.serviceType === 'Fixed Price' ? (
+                      <AdminField label="Price (₹)">
+                        <input min="0" type="number" value={serviceDraft.fixedPrice ?? 0} onChange={(event) => updateServiceDraft({ fixedPrice: Number(event.target.value) })} />
+                      </AdminField>
+                    ) : null}
+                    <AdminField label="Short Description">
+                      <textarea value={serviceDraft.description} onChange={(event) => updateServiceDraft({ description: event.target.value })} />
+                    </AdminField>
+                    <label className="toggle-row">
+                      <input checked={serviceDraft.isActive} type="checkbox" onChange={(event) => updateServiceDraft({ isActive: event.target.checked })} />
+                      Active
+                    </label>
+                  </div>
+                  <div className="service-editor-side">
+                    <AdminField label="Service Image URL">
+                      <input value={serviceDraft.image} onChange={(event) => updateServiceDraft({ image: event.target.value })} />
+                    </AdminField>
+                    <img src={serviceDraft.image} alt="" />
+                    <AdminField label="Display Order">
+                      <input min="0" type="number" value={serviceDraft.displayOrder ?? 0} onChange={(event) => updateServiceDraft({ displayOrder: Number(event.target.value) })} />
+                    </AdminField>
+                    <small>Lower numbers appear first.</small>
+                  </div>
+                </div>
+                <div className="service-editor-actions">
+                  <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleServiceCancel}>Cancel</button>
+                  <button className="small-admin-button" type="button" onClick={handleServiceSave}>
+                    <Save size={16} />
+                    {editingServiceIndex === services.length ? 'Create Service' : 'Update Service'}
+                  </button>
+                </div>
+              </AdminPanel>
+            ) : null}
+          </div>
         ) : null}
 
         {activeSection === 'reviews' ? (
@@ -1299,3 +1494,35 @@ const adminMenuItems: { id: AdminSection; label: string; icon: ReactNode }[] = [
   { id: 'reviews', label: 'Client Review', icon: <Star size={18} /> },
   { id: 'vouchers', label: 'Voucher Management', icon: <Gift size={18} /> },
 ];
+
+function findServiceIndex(services: Service[], serviceToFind: Service) {
+  return services.findIndex((service) => {
+    if (service.id && serviceToFind.id) return service.id === serviceToFind.id;
+    return service.title === serviceToFind.title && service.image === serviceToFind.image;
+  });
+}
+
+function normalizeAdminService(service: Service, fallbackOrder = 0): Service {
+  const serviceType = service.serviceType ?? (service.price.toLowerCase().includes('contact') ? 'Contact for Price' : 'Fixed Price');
+  const parsedPrice = Number(service.price.replace(/[^0-9]/g, '')) || 0;
+  const fixedPrice = service.fixedPrice ?? parsedPrice;
+  const minPrice = service.minPrice ?? fixedPrice;
+  const maxPrice = service.maxPrice ?? fixedPrice;
+  const price = serviceType === 'Contact for Price'
+    ? 'Contact Us'
+    : serviceType === 'Price Range'
+      ? `₹${minPrice.toLocaleString('en-IN')} - ₹${maxPrice.toLocaleString('en-IN')}`
+      : `₹${fixedPrice.toLocaleString('en-IN')}`;
+
+  return {
+    ...service,
+    category: service.category || 'Hair Style',
+    serviceType,
+    fixedPrice,
+    minPrice,
+    maxPrice,
+    price,
+    isActive: service.isActive ?? true,
+    displayOrder: service.displayOrder ?? fallbackOrder,
+  };
+}
