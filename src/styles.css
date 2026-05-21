@@ -1574,8 +1574,17 @@ textarea {
   width: 100%;
 }
 
-.home-settings-grid .admin-panel:first-child {
+.home-settings-grid .admin-panel:first-of-type {
   grid-row: span 2;
+}
+
+.home-page-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
 }
 
 .admin-panel {
@@ -1713,6 +1722,16 @@ textarea {
 .admin-dropzone:hover {
   border-color: var(--gold);
   box-shadow: 0 16px 36px rgba(48, 77, 68, 0.1);
+}
+
+.admin-dropzone.disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.admin-dropzone.disabled:hover {
+  border-color: rgba(47, 92, 80, 0.35);
+  box-shadow: none;
 }
 
 .admin-dropzone span {
@@ -2342,7 +2361,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .home-settings-grid .admin-panel:first-child {
+  .home-settings-grid .admin-panel:first-of-type {
     grid-row: auto;
   }
 

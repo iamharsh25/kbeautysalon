@@ -66,12 +66,14 @@ export function AdminDashboard({
   onReviewChange: (reviews: Review[]) => void;
   onServiceChange: (services: Service[]) => void;
   onStaffChange: (staffMembers: StaffMember[]) => void;
-  onSettingsChange: (settings: SiteSettings) => void;
+  onSettingsChange: (settings: SiteSettings) => void | Promise<void>;
   onVoucherChange: (vouchers: Voucher[]) => void;
 }) {
   const [activeSection, setActiveSection] = useState<AdminSection>('home-page');
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [homeImageStatus, setHomeImageStatus] = useState('');
+  const [isEditingHomePage, setIsEditingHomePage] = useState(false);
+  const [homeSettingsDraft, setHomeSettingsDraft] = useState(settings);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
@@ -94,6 +96,13 @@ export function AdminDashboard({
       .toLowerCase()
       .includes(normalizedCustomerSearch);
   });
+  const homeSettings = isEditingHomePage ? homeSettingsDraft : settings;
+
+  useEffect(() => {
+    if (!isEditingHomePage) {
+      setHomeSettingsDraft(settings);
+    }
+  }, [isEditingHomePage, settings]);
 
   useEffect(() => {
     const isValidSection = adminMenuItems.some((item) => item.id === adminSection);
@@ -114,6 +123,8 @@ export function AdminDashboard({
 
   function navigateToAdminSection(sectionId: AdminSection) {
     setActiveSection(sectionId);
+    setIsEditingHomePage(false);
+    setHomeSettingsDraft(settings);
     setIsEditingCustomer(false);
     setCustomerDraft(null);
 
@@ -194,7 +205,34 @@ export function AdminDashboard({
     action?.();
   }
 
+  function handleHomePageEdit() {
+    setHomeSettingsDraft(settings);
+    setIsEditingHomePage(true);
+  }
+
+  function handleHomePageCancel() {
+    setHomeSettingsDraft(settings);
+    setHomeImageStatus('');
+    setIsEditingHomePage(false);
+  }
+
+  async function handleHomePageSave() {
+    setHomeImageStatus('Saving home page settings...');
+    try {
+      await onSettingsChange(homeSettingsDraft);
+      setHomeImageStatus('Home page settings saved.');
+      setIsEditingHomePage(false);
+    } catch (error) {
+      setHomeImageStatus(error instanceof Error ? error.message : 'Home page settings could not be saved.');
+    }
+  }
+
+  function updateHomeSettingsDraft(patch: Partial<SiteSettings>) {
+    setHomeSettingsDraft((currentSettings) => ({ ...currentSettings, ...patch }));
+  }
+
   async function uploadHomeImages(files: File[]) {
+    if (!isEditingHomePage) return;
     if (!files.length) return;
 
     try {
@@ -219,23 +257,26 @@ export function AdminDashboard({
   }
 
   function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
+    if (!isEditingHomePage) return;
     const file = event.target.files?.[0];
     if (file) {
-      onSettingsChange({ ...settings, logoUrl: URL.createObjectURL(file) });
+      updateHomeSettingsDraft({ logoUrl: URL.createObjectURL(file) });
       event.target.value = '';
     }
   }
 
   function handleLogoDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
+    if (!isEditingHomePage) return;
     const file = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('image/'));
     if (file) {
-      onSettingsChange({ ...settings, logoUrl: URL.createObjectURL(file) });
+      updateHomeSettingsDraft({ logoUrl: URL.createObjectURL(file) });
     }
   }
 
   function handleHomeImageDrop(event: DragEvent<HTMLDivElement>, targetId: string) {
     event.preventDefault();
+    if (!isEditingHomePage) return;
     if (!draggedImageId || draggedImageId === targetId) return;
 
     const draggedIndex = homePageImages.findIndex((image) => image.id === draggedImageId);
@@ -255,6 +296,7 @@ export function AdminDashboard({
   }
 
   function handleHomeImageDelete(image: HomePageImage) {
+    if (!isEditingHomePage) return;
     requestConfirmation({
       title: 'Delete home page image?',
       message: `This will remove "${image.title}" from the home page carousel.`,
@@ -445,10 +487,29 @@ export function AdminDashboard({
         </div>
 
         {activeSection === 'home-page' ? (
-          <div className="home-settings-grid">
+          <div className={isEditingHomePage ? 'home-settings-grid editing' : 'home-settings-grid'}>
+            <div className="home-page-actions">
+              {isEditingHomePage ? (
+                <>
+                  <button className="small-admin-button" type="button" onClick={handleHomePageSave}>
+                    <Save size={16} />
+                    Save
+                  </button>
+                  <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleHomePageCancel}>
+                    <X size={16} />
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button className="small-admin-button" type="button" onClick={handleHomePageEdit}>
+                  <Settings size={16} />
+                  Edit Home Page
+                </button>
+              )}
+            </div>
             <AdminPanel icon={<Home size={20} />} title="Home page carousel">
               <label
-                className="admin-dropzone"
+                className={isEditingHomePage ? 'admin-dropzone' : 'admin-dropzone disabled'}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={handleHomeImageFileDrop}
               >
@@ -461,7 +522,7 @@ export function AdminDashboard({
                   <ImagePlus size={16} />
                   Browse Images
                 </b>
-                <input aria-label="Upload homepage images" accept="image/*" multiple type="file" onChange={handleHomeImageUpload} />
+                <input aria-label="Upload homepage images" accept="image/*" disabled={!isEditingHomePage} multiple type="file" onChange={handleHomeImageUpload} />
               </label>
 
               {homeImageStatus ? <p className="admin-status-text">{homeImageStatus}</p> : null}
@@ -470,7 +531,7 @@ export function AdminDashboard({
                 {homePageImages.map((image, index) => (
                   <div
                     className="home-image-row"
-                    draggable
+                    draggable={isEditingHomePage}
                     key={image.id}
                     onDragStart={() => setDraggedImageId(image.id)}
                     onDragOver={(event) => event.preventDefault()}
@@ -484,7 +545,7 @@ export function AdminDashboard({
                     </div>
                     <button
                       className="danger-admin-button"
-                      disabled={homePageImages.length === 1}
+                      disabled={!isEditingHomePage || homePageImages.length === 1}
                       type="button"
                       onClick={() => handleHomeImageDelete(image)}
                     >
@@ -515,10 +576,10 @@ export function AdminDashboard({
               <div className="brand-settings-card">
                 <div className="logo-preview-card">
                   <strong>Current logo</strong>
-                  <img src={settings.logoUrl} alt="Current logo preview" />
+                  <img src={homeSettings.logoUrl} alt="Current logo preview" />
                 </div>
                 <label
-                  className="admin-dropzone compact"
+                  className={isEditingHomePage ? 'admin-dropzone compact' : 'admin-dropzone compact disabled'}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={handleLogoDrop}
                 >
@@ -531,7 +592,7 @@ export function AdminDashboard({
                     <ImagePlus size={16} />
                     Browse Logo
                   </b>
-                  <input aria-label="Upload logo" accept="image/*" type="file" onChange={handleLogoUpload} />
+                  <input aria-label="Upload logo" accept="image/*" disabled={!isEditingHomePage} type="file" onChange={handleLogoUpload} />
                 </label>
               </div>
 
@@ -540,13 +601,15 @@ export function AdminDashboard({
                   <div className="color-input-row">
                     <input
                       aria-label="Primary colour picker"
+                      disabled={!isEditingHomePage}
                       type="color"
-                      value={settings.themePrimaryColor}
-                      onChange={(event) => onSettingsChange({ ...settings, themePrimaryColor: event.target.value })}
+                      value={homeSettings.themePrimaryColor}
+                      onChange={(event) => updateHomeSettingsDraft({ themePrimaryColor: event.target.value })}
                     />
                     <input
-                      value={settings.themePrimaryColor}
-                      onChange={(event) => onSettingsChange({ ...settings, themePrimaryColor: event.target.value })}
+                      readOnly={!isEditingHomePage}
+                      value={homeSettings.themePrimaryColor}
+                      onChange={(event) => updateHomeSettingsDraft({ themePrimaryColor: event.target.value })}
                     />
                   </div>
                 </AdminField>
@@ -554,13 +617,15 @@ export function AdminDashboard({
                   <div className="color-input-row">
                     <input
                       aria-label="Accent colour picker"
+                      disabled={!isEditingHomePage}
                       type="color"
-                      value={settings.themeAccentColor}
-                      onChange={(event) => onSettingsChange({ ...settings, themeAccentColor: event.target.value })}
+                      value={homeSettings.themeAccentColor}
+                      onChange={(event) => updateHomeSettingsDraft({ themeAccentColor: event.target.value })}
                     />
                     <input
-                      value={settings.themeAccentColor}
-                      onChange={(event) => onSettingsChange({ ...settings, themeAccentColor: event.target.value })}
+                      readOnly={!isEditingHomePage}
+                      value={homeSettings.themeAccentColor}
+                      onChange={(event) => updateHomeSettingsDraft({ themeAccentColor: event.target.value })}
                     />
                   </div>
                 </AdminField>
@@ -570,34 +635,37 @@ export function AdminDashboard({
             <AdminPanel icon={<Settings size={20} />} title="Website details">
               <div className="website-details-grid">
                 <AdminField label="Phone">
-                  <input value={settings.phone} onChange={(event) => onSettingsChange({ ...settings, phone: event.target.value })} />
+                  <input readOnly={!isEditingHomePage} value={homeSettings.phone} onChange={(event) => updateHomeSettingsDraft({ phone: event.target.value })} />
                 </AdminField>
                 <AdminField label="Email">
-                  <input value={settings.email} onChange={(event) => onSettingsChange({ ...settings, email: event.target.value })} />
+                  <input readOnly={!isEditingHomePage} value={homeSettings.email} onChange={(event) => updateHomeSettingsDraft({ email: event.target.value })} />
                 </AdminField>
                 <AdminField label="Instagram profile">
                   <input
-                    value={settings.instagramUrl}
-                    onChange={(event) => onSettingsChange({ ...settings, instagramUrl: event.target.value })}
+                    readOnly={!isEditingHomePage}
+                    value={homeSettings.instagramUrl}
+                    onChange={(event) => updateHomeSettingsDraft({ instagramUrl: event.target.value })}
                   />
                 </AdminField>
                 <AdminField label="Currency code">
                   <input
-                    value={settings.currencyCode}
-                    onChange={(event) => onSettingsChange({ ...settings, currencyCode: event.target.value.toUpperCase() })}
+                    readOnly={!isEditingHomePage}
+                    value={homeSettings.currencyCode}
+                    onChange={(event) => updateHomeSettingsDraft({ currencyCode: event.target.value.toUpperCase() })}
                   />
                 </AdminField>
                 <AdminField label="GST percentage">
                   <input
                     min="0"
+                    readOnly={!isEditingHomePage}
                     step="0.01"
                     type="number"
-                    value={settings.gstPercent}
-                    onChange={(event) => onSettingsChange({ ...settings, gstPercent: Number(event.target.value) })}
+                    value={homeSettings.gstPercent}
+                    onChange={(event) => updateHomeSettingsDraft({ gstPercent: Number(event.target.value) })}
                   />
                 </AdminField>
                 <AdminField label="Address">
-                  <textarea value={settings.address} onChange={(event) => onSettingsChange({ ...settings, address: event.target.value })} />
+                  <textarea readOnly={!isEditingHomePage} value={homeSettings.address} onChange={(event) => updateHomeSettingsDraft({ address: event.target.value })} />
                 </AdminField>
               </div>
             </AdminPanel>

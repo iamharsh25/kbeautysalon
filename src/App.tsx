@@ -291,9 +291,7 @@ export function App() {
                 onReviewChange={setReviews}
                 onServiceChange={setServices}
                 onStaffChange={setStaffMembers}
-                onSettingsChange={(nextSettings) => {
-                  void handleSettingsChange(nextSettings);
-                }}
+                onSettingsChange={handleSettingsChange}
                 onVoucherChange={setVouchers}
               />
             }
