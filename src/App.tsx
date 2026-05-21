@@ -23,7 +23,7 @@ import { HomePage } from './pages/HomePage';
 import { ServicesPage } from './pages/ServicesPage';
 import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
 import { deleteHomePageImage, getHomePageImages, reorderHomePageImages, uploadHomePageImages } from './services/homePageService';
-import { getSalonSettings, updateSalonSettings } from './services/salonSettingsService';
+import { getSalonSettings, updateSalonSettings, uploadSalonLogo } from './services/salonSettingsService';
 import { createServiceMenuItem, deleteServiceMenuItem, getServiceMenu, updateServiceMenuItem } from './services/serviceMenuService';
 import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, Service, SiteSettings } from './types';
 
@@ -151,6 +151,10 @@ export function App() {
   async function handleSettingsChange(nextSettings: SiteSettings) {
     setSettings(nextSettings);
     await updateSalonSettings(nextSettings);
+  }
+
+  async function handleLogoUpload(file: File) {
+    return uploadSalonLogo(file);
   }
 
   async function handleCustomerCreate(customer: Customer) {
@@ -328,6 +332,7 @@ export function App() {
                 onHomePageImageDelete={handleHomePageImageDelete}
                 onHomePageImagesReorder={handleHomePageImagesReorder}
                 onHomePageImagesUpload={handleHomePageImageUpload}
+                onLogoUpload={handleLogoUpload}
                 onLogout={goHome}
                 onReviewChange={setReviews}
                 onServiceChange={setServices}

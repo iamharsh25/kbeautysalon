@@ -1,6 +1,7 @@
 import { initialSettings } from '../data/initialData';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import type { SiteSettings } from '../types';
+import { sanitizeStorageFileName } from '../utils/homepageImages';
 
 type SalonSettingsRow = {
   id: string;
@@ -78,4 +79,24 @@ export async function updateSalonSettings(settings: SiteSettings) {
 
   const { error } = await query;
   if (error) throw new Error(error.message);
+}
+
+export async function uploadSalonLogo(file: File) {
+  if (!isSupabaseConfigured || !supabase) {
+    return URL.createObjectURL(file);
+  }
+
+  const storagePath = `logos/${Date.now()}-${crypto.randomUUID()}-${sanitizeStorageFileName(file.name) || 'logo'}`;
+  const { error: uploadError } = await supabase.storage
+    .from('site-assets')
+    .upload(storagePath, file, {
+      cacheControl: '3600',
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data } = supabase.storage.from('site-assets').getPublicUrl(storagePath);
+  return data.publicUrl;
 }

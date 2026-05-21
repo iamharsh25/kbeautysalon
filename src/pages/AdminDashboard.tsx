@@ -49,6 +49,7 @@ export function AdminDashboard({
   onHomePageImageDelete,
   onHomePageImagesReorder,
   onHomePageImagesUpload,
+  onLogoUpload,
   onLogout,
   onReviewChange,
   onServiceChange,
@@ -79,6 +80,7 @@ export function AdminDashboard({
   onHomePageImageDelete: (image: HomePageImage) => void | Promise<void>;
   onHomePageImagesReorder: (images: HomePageImage[]) => void | Promise<void>;
   onHomePageImagesUpload: (files: File[]) => void | Promise<void>;
+  onLogoUpload: (file: File) => string | Promise<string>;
   onLogout: () => void;
   onReviewChange: (reviews: Review[]) => void;
   onServiceChange: (services: Service[]) => void;
@@ -333,11 +335,23 @@ export function AdminDashboard({
     void uploadHomeImages(Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')));
   }
 
+  async function uploadLogoFile(file: File) {
+    if (!isEditingHomePage) return;
+    try {
+      setHomeImageStatus('Uploading logo...');
+      const logoUrl = await onLogoUpload(file);
+      updateHomeSettingsDraft({ logoUrl });
+      setHomeImageStatus('Logo uploaded. Click Save to publish it.');
+    } catch (error) {
+      setHomeImageStatus(error instanceof Error ? error.message : 'Logo could not be uploaded.');
+    }
+  }
+
   function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
     if (!isEditingHomePage) return;
     const file = event.target.files?.[0];
     if (file) {
-      updateHomeSettingsDraft({ logoUrl: URL.createObjectURL(file) });
+      void uploadLogoFile(file);
       event.target.value = '';
     }
   }
@@ -347,7 +361,7 @@ export function AdminDashboard({
     if (!isEditingHomePage) return;
     const file = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('image/'));
     if (file) {
-      updateHomeSettingsDraft({ logoUrl: URL.createObjectURL(file) });
+      void uploadLogoFile(file);
     }
   }
 
