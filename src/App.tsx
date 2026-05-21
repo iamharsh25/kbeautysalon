@@ -268,35 +268,38 @@ export function App() {
             />
           }
         />
-        <Route
-          path="/admin"
-          element={
-            <AdminDashboard
-              adminFullName={currentUserFullName}
-              bookings={bookings}
-              customers={customers}
-              galleryImages={galleryImages}
-              homePageImages={homePageImages}
-              reviews={reviews}
-              services={services}
-              staffMembers={staffMembers}
-              settings={settings}
-              vouchers={vouchers}
-              onBookingChange={setBookings}
-              onCustomersChange={setCustomers}
-              onGalleryChange={setGalleryImages}
-              onHomePageImageDelete={handleHomePageImageDelete}
-              onHomePageImagesReorder={handleHomePageImagesReorder}
-              onHomePageImagesUpload={handleHomePageImageUpload}
-              onLogout={goHome}
-              onReviewChange={setReviews}
-              onServiceChange={setServices}
-              onStaffChange={setStaffMembers}
-              onSettingsChange={setSettings}
-              onVoucherChange={setVouchers}
-            />
-          }
-        />
+        {['/admin', '/admin/:adminSection', '/admin/:adminSection/:customerId'].map((path) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <AdminDashboard
+                adminFullName={currentUserFullName}
+                bookings={bookings}
+                customers={customers}
+                galleryImages={galleryImages}
+                homePageImages={homePageImages}
+                reviews={reviews}
+                services={services}
+                staffMembers={staffMembers}
+                settings={settings}
+                vouchers={vouchers}
+                onBookingChange={setBookings}
+                onCustomersChange={setCustomers}
+                onGalleryChange={setGalleryImages}
+                onHomePageImageDelete={handleHomePageImageDelete}
+                onHomePageImagesReorder={handleHomePageImagesReorder}
+                onHomePageImagesUpload={handleHomePageImageUpload}
+                onLogout={goHome}
+                onReviewChange={setReviews}
+                onServiceChange={setServices}
+                onStaffChange={setStaffMembers}
+                onSettingsChange={setSettings}
+                onVoucherChange={setVouchers}
+              />
+            }
+          />
+        ))}
         <Route
           path="/client"
           element={

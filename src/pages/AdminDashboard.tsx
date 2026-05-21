@@ -1,5 +1,6 @@
-import { useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
-import { ArrowLeft, CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck, UsersRound } from 'lucide-react';
+import { useEffect, useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, Palette, Plus, Save, Search, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck, UsersRound, X } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
 import type { AdminSection, Booking, Customer, GalleryImage, HomePageImage, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
@@ -58,10 +59,108 @@ export function AdminDashboard({
   const [homeImageStatus, setHomeImageStatus] = useState('');
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [isEditingCustomer, setIsEditingCustomer] = useState(false);
+  const [customerDraft, setCustomerDraft] = useState<Customer | null>(null);
   const [voucherToAssign, setVoucherToAssign] = useState(vouchers.find((voucher) => voucher.status === 'Active')?.code ?? vouchers[0]?.code ?? '');
   const [voucherStartDate, setVoucherStartDate] = useState('2026-05-21');
   const [voucherExpiryDate, setVoucherExpiryDate] = useState('2026-08-21');
+  const navigate = useNavigate();
+  const { adminSection, customerId } = useParams();
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
+  const visibleCustomer = isEditingCustomer && customerDraft ? customerDraft : selectedCustomer;
+  const normalizedCustomerSearch = customerSearch.trim().toLowerCase();
+  const filteredCustomers = customers.filter((customer) => {
+    if (!normalizedCustomerSearch) return true;
+    return [customer.fullName, customer.email, customer.mobile]
+      .join(' ')
+      .toLowerCase()
+      .includes(normalizedCustomerSearch);
+  });
+
+  useEffect(() => {
+    const isValidSection = adminMenuItems.some((item) => item.id === adminSection);
+    const nextSection = isValidSection ? adminSection as AdminSection : 'home-page';
+    setActiveSection(nextSection);
+
+    if (nextSection === 'customers') {
+      setSelectedCustomerId(customerId ?? '');
+      setIsEditingCustomer(false);
+      setCustomerDraft(null);
+      return;
+    }
+
+    setSelectedCustomerId('');
+    setIsEditingCustomer(false);
+    setCustomerDraft(null);
+  }, [adminSection, customerId]);
+
+  function navigateToAdminSection(sectionId: AdminSection) {
+    setActiveSection(sectionId);
+    setIsEditingCustomer(false);
+    setCustomerDraft(null);
+
+    if (sectionId === 'home-page') {
+      navigate('/admin');
+      return;
+    }
+
+    if (sectionId === 'customers') {
+      setSelectedCustomerId('');
+      navigate('/admin/customers');
+      return;
+    }
+
+    setSelectedCustomerId('');
+    navigate(`/admin/${sectionId}`);
+  }
+
+  function openCustomerProfile(customer: Customer) {
+    setSelectedCustomerId(customer.id);
+    setIsEditingCustomer(false);
+    setCustomerDraft(null);
+    navigate(`/admin/customers/${customer.id}`);
+  }
+
+  function goToCustomerList() {
+    setSelectedCustomerId('');
+    setIsEditingCustomer(false);
+    setCustomerDraft(null);
+    navigate('/admin/customers');
+  }
+
+  function updateCustomerDraft(patch: Partial<Customer>) {
+    setCustomerDraft((currentDraft) => currentDraft ? { ...currentDraft, ...patch } : currentDraft);
+  }
+
+  function updateCustomerMembershipDraft(patch: Partial<Customer['membership']>) {
+    setCustomerDraft((currentDraft) => currentDraft ? {
+      ...currentDraft,
+      membership: {
+        ...currentDraft.membership,
+        ...patch,
+      },
+    } : currentDraft);
+  }
+
+  function handleCustomerEdit() {
+    if (!selectedCustomer) return;
+    setCustomerDraft(JSON.parse(JSON.stringify(selectedCustomer)) as Customer);
+    setIsEditingCustomer(true);
+  }
+
+  function handleCustomerCancel() {
+    setCustomerDraft(null);
+    setIsEditingCustomer(false);
+  }
+
+  function handleCustomerSave() {
+    if (!customerDraft) return;
+    onCustomersChange(customers.map((customer) => customer.id === customerDraft.id ? customerDraft : customer));
+    setSelectedCustomerId(customerDraft.id);
+    setCustomerDraft(null);
+    setIsEditingCustomer(false);
+  }
 
   async function uploadHomeImages(files: File[]) {
     if (!files.length) return;
@@ -124,6 +223,7 @@ export function AdminDashboard({
   }
 
   function handleHomeImageDelete(image: HomePageImage) {
+    if (!window.confirm(`Delete "${image.title}" from the home page carousel? This cannot be undone.`)) return;
     setHomeImageStatus('Deleting image...');
     void Promise.resolve(onHomePageImageDelete(image))
       .then(() => setHomeImageStatus('Image deleted.'))
@@ -132,7 +232,7 @@ export function AdminDashboard({
       });
   }
 
-  function handleCreateCustomer(event: ChangeEvent<HTMLFormElement>) {
+  function handleCreateCustomer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const fullName = String(formData.get('fullName') ?? '').trim();
@@ -160,7 +260,7 @@ export function AdminDashboard({
     };
 
     onCustomersChange([nextCustomer, ...customers]);
-    setSelectedCustomerId(nextCustomer.id);
+    openCustomerProfile(nextCustomer);
     event.currentTarget.reset();
   }
 
@@ -189,6 +289,34 @@ export function AdminDashboard({
     }));
   }
 
+  function handleDeleteCustomerVoucher(voucherIndex: number) {
+    if (!selectedCustomer) return;
+    const voucher = selectedCustomer.vouchers[voucherIndex];
+    if (!voucher) return;
+    if (!window.confirm(`Remove voucher "${voucher.voucherCode}" from ${selectedCustomer.fullName}? This cannot be undone.`)) return;
+
+    const nextCustomers = customers.map((customer) => {
+      if (customer.id !== selectedCustomer.id) return customer;
+      return {
+        ...customer,
+        vouchers: customer.vouchers.filter((_, index) => index !== voucherIndex),
+      };
+    });
+
+    onCustomersChange(nextCustomers);
+    if (customerDraft?.id === selectedCustomer.id) {
+      setCustomerDraft({
+        ...customerDraft,
+        vouchers: customerDraft.vouchers.filter((_, index) => index !== voucherIndex),
+      });
+    }
+  }
+
+  function handleDeleteService(index: number, service: Service) {
+    if (!window.confirm(`Delete "${service.title}" from the service menu? This cannot be undone.`)) return;
+    onServiceChange(services.filter((_, itemIndex) => itemIndex !== index));
+  }
+
   return (
     <div className="admin-page">
       <aside className="admin-sidebar">
@@ -205,7 +333,7 @@ export function AdminDashboard({
               className={activeSection === item.id ? 'active' : ''}
               key={item.id}
               type="button"
-              onClick={() => setActiveSection(item.id)}
+              onClick={() => navigateToAdminSection(item.id)}
             >
               {item.icon}
               {item.label}
@@ -412,34 +540,130 @@ export function AdminDashboard({
 
         {activeSection === 'customers' ? (
           <div className="customers-workspace">
-            <AdminPanel icon={<UsersRound size={20} />} title={selectedCustomer ? 'Customer profile' : 'Manage Customers'}>
-              {selectedCustomer ? (
+            <AdminPanel icon={<UsersRound size={20} />} title={visibleCustomer ? 'Customer profile' : 'Manage Customers'}>
+              {visibleCustomer ? (
                 <div className="customer-detail">
-                  <button className="back-button admin-back-button" type="button" onClick={() => setSelectedCustomerId('')}>
-                    <ArrowLeft size={16} />
-                    Back to customers
-                  </button>
-                  <div className="customer-profile-card">
-                    <img src={selectedCustomer.profilePictureUrl} alt="" />
+                  <div className="customer-detail-actions">
+                    <button className="back-button admin-back-button" type="button" onClick={goToCustomerList}>
+                      <ArrowLeft size={16} />
+                      Back to customers
+                    </button>
                     <div>
-                      <span>Customer Details</span>
-                      <h2>{selectedCustomer.fullName}</h2>
-                      <p>{selectedCustomer.email}</p>
-                      <p>{selectedCustomer.mobile}</p>
-                      <p>{selectedCustomer.address}</p>
+                      {isEditingCustomer ? (
+                        <>
+                          <button className="small-admin-button" type="button" onClick={handleCustomerSave}>
+                            <Save size={16} />
+                            Save
+                          </button>
+                          <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleCustomerCancel}>
+                            <X size={16} />
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button className="small-admin-button" type="button" onClick={handleCustomerEdit}>
+                          <Settings size={16} />
+                          Edit
+                        </button>
+                      )}
                     </div>
                   </div>
+                  {isEditingCustomer && customerDraft ? (
+                    <div className="customer-edit-card">
+                      <div className="customer-edit-avatar">
+                        <img src={customerDraft.profilePictureUrl} alt="" />
+                        <AdminField label="Profile Picture URL">
+                          <input
+                            value={customerDraft.profilePictureUrl}
+                            onChange={(event) => updateCustomerDraft({ profilePictureUrl: event.target.value })}
+                          />
+                        </AdminField>
+                      </div>
+                      <div className="customer-edit-grid">
+                        <AdminField label="Full Name">
+                          <input value={customerDraft.fullName} onChange={(event) => updateCustomerDraft({ fullName: event.target.value })} />
+                        </AdminField>
+                        <AdminField label="Email">
+                          <input type="email" value={customerDraft.email} onChange={(event) => updateCustomerDraft({ email: event.target.value })} />
+                        </AdminField>
+                        <AdminField label="Mobile Number">
+                          <input value={customerDraft.mobile} onChange={(event) => updateCustomerDraft({ mobile: event.target.value })} />
+                        </AdminField>
+                        <AdminField label="Address">
+                          <input value={customerDraft.address} onChange={(event) => updateCustomerDraft({ address: event.target.value })} />
+                        </AdminField>
+                        <AdminField label="Notes">
+                          <textarea value={customerDraft.notes} onChange={(event) => updateCustomerDraft({ notes: event.target.value })} />
+                        </AdminField>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="customer-profile-card">
+                      <img src={visibleCustomer.profilePictureUrl} alt="" />
+                      <div>
+                        <span>Customer Details</span>
+                        <h2>{visibleCustomer.fullName}</h2>
+                        <p>{visibleCustomer.email}</p>
+                        <p>{visibleCustomer.mobile}</p>
+                        <p>{visibleCustomer.address}</p>
+                        {visibleCustomer.notes ? <p>{visibleCustomer.notes}</p> : null}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="customer-detail-grid">
                     <section className="customer-info-box">
                       <h3>Membership</h3>
-                      <dl>
-                        <div><dt>Salon Member</dt><dd>{selectedCustomer.membership.isMember ? 'Yes' : 'No'}</dd></div>
-                        <div><dt>Start Date</dt><dd>{selectedCustomer.membership.startDate || 'Not started'}</dd></div>
-                        <div><dt>End Date</dt><dd>{selectedCustomer.membership.endDate || 'Not set'}</dd></div>
-                        <div><dt>Membership Fee</dt><dd>{formatCurrency(selectedCustomer.membership.fee)}</dd></div>
-                        <div><dt>Paid Date</dt><dd>{selectedCustomer.membership.paidDate || 'Not paid'}</dd></div>
-                      </dl>
+                      {isEditingCustomer && customerDraft ? (
+                        <div className="membership-edit-grid">
+                          <AdminField label="Salon Member">
+                            <select
+                              value={customerDraft.membership.isMember ? 'yes' : 'no'}
+                              onChange={(event) => updateCustomerMembershipDraft({ isMember: event.target.value === 'yes' })}
+                            >
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                            </select>
+                          </AdminField>
+                          <AdminField label="Start Date">
+                            <input
+                              type="date"
+                              value={customerDraft.membership.startDate}
+                              onChange={(event) => updateCustomerMembershipDraft({ startDate: event.target.value })}
+                            />
+                          </AdminField>
+                          <AdminField label="End Date">
+                            <input
+                              type="date"
+                              value={customerDraft.membership.endDate}
+                              onChange={(event) => updateCustomerMembershipDraft({ endDate: event.target.value })}
+                            />
+                          </AdminField>
+                          <AdminField label="Membership Fee">
+                            <input
+                              min="0"
+                              type="number"
+                              value={customerDraft.membership.fee}
+                              onChange={(event) => updateCustomerMembershipDraft({ fee: Number(event.target.value) })}
+                            />
+                          </AdminField>
+                          <AdminField label="Paid Date">
+                            <input
+                              type="date"
+                              value={customerDraft.membership.paidDate}
+                              onChange={(event) => updateCustomerMembershipDraft({ paidDate: event.target.value })}
+                            />
+                          </AdminField>
+                        </div>
+                      ) : (
+                        <dl>
+                          <div><dt>Salon Member</dt><dd>{visibleCustomer.membership.isMember ? 'Yes' : 'No'}</dd></div>
+                          <div><dt>Start Date</dt><dd>{visibleCustomer.membership.startDate || 'Not started'}</dd></div>
+                          <div><dt>End Date</dt><dd>{visibleCustomer.membership.endDate || 'Not set'}</dd></div>
+                          <div><dt>Membership Fee</dt><dd>{formatCurrency(visibleCustomer.membership.fee)}</dd></div>
+                          <div><dt>Paid Date</dt><dd>{visibleCustomer.membership.paidDate || 'Not paid'}</dd></div>
+                        </dl>
+                      )}
                     </section>
 
                     <section className="customer-info-box">
@@ -483,7 +707,7 @@ export function AdminDashboard({
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedCustomer.serviceHistory.length ? selectedCustomer.serviceHistory.map((history) => (
+                          {visibleCustomer.serviceHistory.length ? visibleCustomer.serviceHistory.map((history) => (
                             <tr key={`${history.date}-${history.serviceName}`}>
                               <td>{history.date}</td>
                               <td>{history.time}</td>
@@ -514,10 +738,11 @@ export function AdminDashboard({
                             <th>Status</th>
                             <th>Discount Type</th>
                             <th>Discount Value</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedCustomer.vouchers.length ? selectedCustomer.vouchers.map((voucher, index) => (
+                          {visibleCustomer.vouchers.length ? visibleCustomer.vouchers.map((voucher, index) => (
                             <tr key={`${voucher.voucherCode}-${index}`}>
                               <td>{voucher.voucherCode}</td>
                               <td>{voucher.startDate}</td>
@@ -525,9 +750,15 @@ export function AdminDashboard({
                               <td><span className={voucher.status === 'Voucher Used' ? 'status-pill used' : 'status-pill'}>{voucher.status}</span></td>
                               <td>{voucher.discountType}</td>
                               <td>{voucher.discountValue}</td>
+                              <td>
+                                <button className="danger-admin-button compact-danger-button" type="button" onClick={() => handleDeleteCustomerVoucher(index)}>
+                                  <Trash2 size={15} />
+                                  Delete
+                                </button>
+                              </td>
                             </tr>
                           )) : (
-                            <tr><td colSpan={6}>No vouchers assigned yet.</td></tr>
+                            <tr><td colSpan={7}>No vouchers assigned yet.</td></tr>
                           )}
                         </tbody>
                       </table>
@@ -555,6 +786,18 @@ export function AdminDashboard({
                     </button>
                   </form>
 
+                  <div className="customer-list-toolbar">
+                    <label className="customer-search-field">
+                      <Search size={18} />
+                      <input
+                        value={customerSearch}
+                        placeholder="Search by name, email, or mobile"
+                        onChange={(event) => setCustomerSearch(event.target.value)}
+                      />
+                    </label>
+                    <span>{filteredCustomers.length} customer{filteredCustomers.length === 1 ? '' : 's'}</span>
+                  </div>
+
                   <div className="customer-table-wrap">
                     <table className="customer-data-table customer-list-table">
                       <thead>
@@ -565,8 +808,8 @@ export function AdminDashboard({
                         </tr>
                       </thead>
                       <tbody>
-                        {customers.map((customer) => (
-                          <tr key={customer.id} onClick={() => setSelectedCustomerId(customer.id)}>
+                        {filteredCustomers.length ? filteredCustomers.map((customer) => (
+                          <tr key={customer.id} onClick={() => openCustomerProfile(customer)}>
                             <td>
                               <span className="customer-name-cell">
                                 <img src={customer.profilePictureUrl} alt="" />
@@ -576,7 +819,11 @@ export function AdminDashboard({
                             <td>{customer.email}</td>
                             <td>{customer.mobile}</td>
                           </tr>
-                        ))}
+                        )) : (
+                          <tr>
+                            <td colSpan={3}>No customers match your search.</td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -739,7 +986,7 @@ export function AdminDashboard({
                     onChange={(event) => updateListItem(services, index, { ...service, price: event.target.value }, onServiceChange)}
                   />
                 </AdminField>
-                <button className="danger-admin-button" type="button" onClick={() => onServiceChange(services.filter((_, itemIndex) => itemIndex !== index))}>
+                <button className="danger-admin-button" type="button" onClick={() => handleDeleteService(index, service)}>
                   <Trash2 size={16} />
                   Delete
                 </button>
