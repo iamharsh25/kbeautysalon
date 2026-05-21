@@ -20,8 +20,10 @@ import { BookingPage } from './pages/BookingPage';
 import { ClientDashboard } from './pages/ClientDashboard';
 import { GalleryAlbumPage } from './pages/GalleryAlbumPage';
 import { HomePage } from './pages/HomePage';
-import type { GalleryAlbum, HomePageImage, HomePageImageRow } from './types';
-import { mapHomePageImage, sanitizeStorageFileName } from './utils/homepageImages';
+import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
+import { deleteHomePageImage, getHomePageImages, reorderHomePageImages, uploadHomePageImages } from './services/homePageService';
+import { getSalonSettings, updateSalonSettings } from './services/salonSettingsService';
+import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, SiteSettings } from './types';
 
 function albumSlug(album: GalleryAlbum) {
   return album.title
@@ -57,14 +59,22 @@ export function App() {
     async function loadInitialSupabaseData() {
       if (!isSupabaseConfigured || !supabase) return;
 
-      const { data: homepageImages, error: homepageError } = await supabase
-        .from('homepage_images')
-        .select('id,title,image_url,storage_path,display_order')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      const [homepageImages, salonSettings, databaseCustomers] = await Promise.all([
+        getHomePageImages(),
+        getSalonSettings(),
+        getCustomers(),
+      ]);
 
-      if (!homepageError && homepageImages?.length && isMounted) {
-        setHomePageImages(homepageImages.map((row) => mapHomePageImage(row as HomePageImageRow)));
+      if (homepageImages.length && isMounted) {
+        setHomePageImages(homepageImages);
+      }
+
+      if (salonSettings && isMounted) {
+        setSettings(salonSettings);
+      }
+
+      if (isMounted) {
+        setCustomers(databaseCustomers);
       }
 
       const { data: userData } = await supabase.auth.getUser();
@@ -91,71 +101,14 @@ export function App() {
   async function handleHomePageImageUpload(files: File[]) {
     if (!files.length) return;
 
-    if (!isSupabaseConfigured || !supabase) {
-      const nextImages = files.map((file, index) => ({
-        id: `${file.name}-${crypto.randomUUID()}`,
-        title: file.name.replace(/\.[^.]+$/, ''),
-        url: URL.createObjectURL(file),
-        displayOrder: homePageImages.length + index,
-      }));
-      setHomePageImages((currentImages) => [...currentImages, ...nextImages]);
-      return;
-    }
-
-    const uploadedImages: HomePageImage[] = [];
-
-    for (const file of files) {
-      const storagePath = `homepage/${Date.now()}-${crypto.randomUUID()}-${sanitizeStorageFileName(file.name) || 'image'}`;
-      const { error: uploadError } = await supabase.storage
-        .from('site-assets')
-        .upload(storagePath, file, {
-          cacheControl: '3600',
-          contentType: file.type,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
-
-      const { data: publicUrlData } = supabase.storage.from('site-assets').getPublicUrl(storagePath);
-      const displayOrder = homePageImages.length + uploadedImages.length;
-      const { data, error } = await supabase
-        .from('homepage_images')
-        .insert({
-          title: file.name.replace(/\.[^.]+$/, ''),
-          image_url: publicUrlData.publicUrl,
-          storage_path: storagePath,
-          display_order: displayOrder,
-          is_active: true,
-        })
-        .select('id,title,image_url,storage_path,display_order')
-        .single();
-
-      if (error || !data) {
-        await supabase.storage.from('site-assets').remove([storagePath]);
-        throw new Error(error?.message ?? 'Image record could not be saved.');
-      }
-
-      uploadedImages.push(mapHomePageImage(data as HomePageImageRow));
-    }
-
+    const uploadedImages = await uploadHomePageImages(files, homePageImages.length);
     setHomePageImages((currentImages) => [...currentImages, ...uploadedImages]);
   }
 
   async function handleHomePageImageDelete(image: HomePageImage) {
     if (homePageImages.length === 1) return;
 
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.from('homepage_images').delete().eq('id', image.id);
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (image.storagePath) {
-        await supabase.storage.from('site-assets').remove([image.storagePath]);
-      }
-    }
+    await deleteHomePageImage(image);
 
     const nextImages = homePageImages
       .filter((item) => item.id !== image.id)
@@ -169,19 +122,47 @@ export function App() {
     const reorderedImages = images.map((image, index) => ({ ...image, displayOrder: index }));
     setHomePageImages(reorderedImages);
 
-    if (!isSupabaseConfigured || !supabase) return;
+    await reorderHomePageImages(reorderedImages);
+  }
 
-    const updates = reorderedImages.map((image) =>
-      supabase
-        .from('homepage_images')
-        .update({ display_order: image.displayOrder })
-        .eq('id', image.id),
-    );
-    const results = await Promise.all(updates);
-    const failedUpdate = results.find((result) => result.error);
-    if (failedUpdate?.error) {
-      throw new Error(failedUpdate.error.message);
-    }
+  async function handleSettingsChange(nextSettings: SiteSettings) {
+    setSettings(nextSettings);
+    await updateSalonSettings(nextSettings);
+  }
+
+  async function handleCustomerCreate(customer: Customer) {
+    const createdCustomer = await createCustomer(customer);
+    setCustomers((currentCustomers) => [createdCustomer, ...currentCustomers]);
+    return createdCustomer;
+  }
+
+  async function handleCustomerUpdate(customer: Customer) {
+    const updatedCustomer = await updateCustomer(customer);
+    setCustomers((currentCustomers) => currentCustomers.map((item) => item.id === updatedCustomer.id ? updatedCustomer : item));
+    return updatedCustomer;
+  }
+
+  async function handleCustomerVoucherAssign(customerId: string, voucher: CustomerVoucher) {
+    const assignedVoucher = await assignCustomerVoucher(customerId, voucher);
+    setCustomers((currentCustomers) => currentCustomers.map((customer) => {
+      if (customer.id !== customerId) return customer;
+      return {
+        ...customer,
+        vouchers: [assignedVoucher, ...customer.vouchers],
+      };
+    }));
+    return assignedVoucher;
+  }
+
+  async function handleCustomerVoucherDelete(customerId: string, voucherCode: string, voucherIndex: number, voucherAssignmentId?: string) {
+    await deleteCustomerVoucher(customerId, voucherCode, voucherAssignmentId);
+    setCustomers((currentCustomers) => currentCustomers.map((customer) => {
+      if (customer.id !== customerId) return customer;
+      return {
+        ...customer,
+        vouchers: customer.vouchers.filter((_, index) => index !== voucherIndex),
+      };
+    }));
   }
 
   async function handleLogin(email: string, password: string) {
@@ -285,6 +266,10 @@ export function App() {
                 settings={settings}
                 vouchers={vouchers}
                 onBookingChange={setBookings}
+                onCustomerCreate={handleCustomerCreate}
+                onCustomerUpdate={handleCustomerUpdate}
+                onCustomerVoucherAssign={handleCustomerVoucherAssign}
+                onCustomerVoucherDelete={handleCustomerVoucherDelete}
                 onCustomersChange={setCustomers}
                 onGalleryChange={setGalleryImages}
                 onHomePageImageDelete={handleHomePageImageDelete}
@@ -294,7 +279,9 @@ export function App() {
                 onReviewChange={setReviews}
                 onServiceChange={setServices}
                 onStaffChange={setStaffMembers}
-                onSettingsChange={setSettings}
+                onSettingsChange={(nextSettings) => {
+                  void handleSettingsChange(nextSettings);
+                }}
                 onVoucherChange={setVouchers}
               />
             }

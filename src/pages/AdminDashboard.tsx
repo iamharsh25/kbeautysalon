@@ -26,6 +26,10 @@ export function AdminDashboard({
   settings,
   vouchers,
   onBookingChange,
+  onCustomerCreate,
+  onCustomerUpdate,
+  onCustomerVoucherAssign,
+  onCustomerVoucherDelete,
   onCustomersChange,
   onGalleryChange,
   onHomePageImageDelete,
@@ -49,6 +53,10 @@ export function AdminDashboard({
   settings: SiteSettings;
   vouchers: Voucher[];
   onBookingChange: (bookings: Booking[]) => void;
+  onCustomerCreate: (customer: Customer) => Customer | Promise<Customer>;
+  onCustomerUpdate: (customer: Customer) => Customer | Promise<Customer>;
+  onCustomerVoucherAssign: (customerId: string, voucher: CustomerVoucher) => CustomerVoucher | Promise<CustomerVoucher>;
+  onCustomerVoucherDelete: (customerId: string, voucherCode: string, voucherIndex: number, voucherAssignmentId?: string) => void | Promise<void>;
   onCustomersChange: (customers: Customer[]) => void;
   onGalleryChange: (galleryImages: GalleryImage[]) => void;
   onHomePageImageDelete: (image: HomePageImage) => void | Promise<void>;
@@ -163,10 +171,11 @@ export function AdminDashboard({
     setIsEditingCustomer(false);
   }
 
-  function handleCustomerSave() {
+  async function handleCustomerSave() {
     if (!customerDraft) return;
-    onCustomersChange(customers.map((customer) => customer.id === customerDraft.id ? customerDraft : customer));
-    setSelectedCustomerId(customerDraft.id);
+    const updatedCustomer = await onCustomerUpdate(customerDraft);
+    onCustomersChange(customers.map((customer) => customer.id === updatedCustomer.id ? updatedCustomer : customer));
+    setSelectedCustomerId(updatedCustomer.id);
     setCustomerDraft(null);
     setIsEditingCustomer(false);
   }
@@ -261,9 +270,10 @@ export function AdminDashboard({
     });
   }
 
-  function handleCreateCustomer(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateCustomer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const fullName = String(formData.get('fullName') ?? '').trim();
     const email = String(formData.get('email') ?? '').trim();
     const mobile = String(formData.get('mobile') ?? '').trim();
@@ -299,31 +309,35 @@ export function AdminDashboard({
       vouchers: assignedVoucher,
     };
 
-    onCustomersChange([nextCustomer, ...customers]);
+    const createdCustomer = await onCustomerCreate(nextCustomer);
+    onCustomersChange([createdCustomer, ...customers]);
     setIsCustomerCreateOpen(false);
-    openCustomerProfile(nextCustomer);
-    event.currentTarget.reset();
+    openCustomerProfile(createdCustomer);
+    form.reset();
   }
 
-  function handleAssignVoucher() {
+  async function handleAssignVoucher() {
     if (!selectedCustomer || !voucherToAssign || !voucherStartDate || !voucherExpiryDate) return;
     const voucher = vouchers.find((item) => item.code === voucherToAssign);
     if (!voucher) return;
 
+    const customerVoucher: CustomerVoucher = {
+      voucherCode: voucher.code,
+      startDate: voucherStartDate,
+      expiryDate: voucherExpiryDate,
+      status: 'Voucher Not Used',
+      discountType: voucher.discountType ?? (voucher.value.includes('%') ? 'Percentage Off' : 'Amount Off'),
+      discountValue: voucher.discountValue ?? voucher.value,
+    };
+
+    const assignedVoucher = await onCustomerVoucherAssign(selectedCustomer.id, customerVoucher);
     onCustomersChange(customers.map((customer) => {
       if (customer.id !== selectedCustomer.id) return customer;
 
       return {
         ...customer,
         vouchers: [
-          {
-            voucherCode: voucher.code,
-            startDate: voucherStartDate,
-            expiryDate: voucherExpiryDate,
-            status: 'Voucher Not Used',
-            discountType: voucher.discountType ?? (voucher.value.includes('%') ? 'Percentage Off' : 'Amount Off'),
-            discountValue: voucher.discountValue ?? voucher.value,
-          },
+          assignedVoucher,
           ...customer.vouchers,
         ],
       };
@@ -340,6 +354,7 @@ export function AdminDashboard({
       message: `This will remove voucher "${voucher.voucherCode}" from ${selectedCustomer.fullName}.`,
       confirmLabel: 'Remove Voucher',
       onConfirm: () => {
+        void onCustomerVoucherDelete(selectedCustomer.id, voucher.voucherCode, voucherIndex, voucher.id);
         const nextCustomers = customers.map((customer) => {
           if (customer.id !== selectedCustomer.id) return customer;
           return {

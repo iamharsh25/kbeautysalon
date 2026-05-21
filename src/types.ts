@@ -82,6 +82,7 @@ export type CustomerServiceHistory = {
 };
 
 export type CustomerVoucher = {
+  id?: string;
   voucherCode: string;
   startDate: string;
   expiryDate: string;
