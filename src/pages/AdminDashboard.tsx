@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
-import { CalendarDays, Gift, Home, Image, ImagePlus, Mail, MessageSquare, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck } from 'lucide-react';
+import { Bell, CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, Mail, MessageSquare, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
 import type { AdminSection, Booking, GalleryImage, HomePageImage, Lead, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
@@ -53,7 +53,6 @@ export function AdminDashboard({
   const [activeSection, setActiveSection] = useState<AdminSection>('home-page');
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [homeImageStatus, setHomeImageStatus] = useState('');
-  const activeLabel = adminMenuItems.find((item) => item.id === activeSection)?.label ?? 'Admin';
 
   async function uploadHomeImages(files: File[]) {
     if (!files.length) return;
@@ -148,7 +147,9 @@ export function AdminDashboard({
           ))}
         </nav>
         <button className="admin-logout-button" type="button" onClick={onLogout}>
+          <Globe2 size={18} />
           View Website
+          <ExternalLink size={16} />
         </button>
       </aside>
 
@@ -156,11 +157,23 @@ export function AdminDashboard({
         <div className="admin-topbar">
           <div>
             <p>Client Admin</p>
-            <h1>{activeLabel}</h1>
+            <h1>Welcome back! <span aria-hidden="true">👋</span></h1>
+            <span>Here's what's happening with your salon website.</span>
           </div>
-          <button className="outline-admin-button" type="button" onClick={onLogout}>
-            Log out
-          </button>
+          <div className="admin-topbar-actions">
+            <button className="admin-icon-action" type="button" aria-label="Notifications">
+              <Bell size={18} />
+              <span>3</span>
+            </button>
+            <button className="admin-user-button" type="button">
+              <img src={settings.logoUrl} alt="" />
+              Admin User
+              <ChevronDown size={18} />
+            </button>
+            <button className="outline-admin-button" type="button" onClick={onLogout}>
+              Log out
+            </button>
+          </div>
         </div>
 
         {activeSection === 'home-page' ? (
@@ -213,11 +226,29 @@ export function AdminDashboard({
                   </div>
                 ))}
               </div>
+              <div className="admin-tip-row">
+                <Sparkles size={16} />
+                Tip: Drag and drop the slides to reorder them.
+              </div>
+              <div className="admin-website-card">
+                <img src="/homepage/salon_2.jpg" alt="" />
+                <div>
+                  <strong>Your website is looking great!</strong>
+                  <p>Keep your content updated to attract more clients and grow your business.</p>
+                  <button className="small-admin-button" type="button" onClick={onLogout}>
+                    View Website
+                    <ExternalLink size={15} />
+                  </button>
+                </div>
+              </div>
             </AdminPanel>
 
             <AdminPanel icon={<Palette size={20} />} title="Logo and theme">
               <div className="brand-settings-card">
-                <img src={settings.logoUrl} alt="Current logo preview" />
+                <div className="logo-preview-card">
+                  <strong>Current logo</strong>
+                  <img src={settings.logoUrl} alt="Current logo preview" />
+                </div>
                 <label
                   className="admin-dropzone compact"
                   onDragOver={(event) => event.preventDefault()}

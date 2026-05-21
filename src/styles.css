@@ -1290,20 +1290,24 @@ textarea {
 }
 
 .admin-page {
-  background: #f2eee4;
+  background:
+    radial-gradient(circle at top right, rgba(231, 201, 156, 0.14), transparent 34%),
+    #f6f3ee;
   color: var(--ink);
   display: grid;
-  grid-template-columns: 290px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100svh;
 }
 
 .admin-sidebar {
-  background: var(--green-dark);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(231, 201, 156, 0.2), transparent 28%),
+    linear-gradient(160deg, #0d3a2f, var(--green-dark));
   color: var(--white);
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  padding: 24px;
+  gap: 28px;
+  padding: 32px 28px;
 }
 
 .admin-sidebar-brand {
@@ -1325,7 +1329,7 @@ textarea {
 
 .admin-sidebar nav {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .admin-sidebar nav button,
@@ -1339,8 +1343,8 @@ textarea {
   display: inline-flex;
   gap: 10px;
   justify-content: flex-start;
-  min-height: 46px;
-  padding: 0 12px;
+  min-height: 52px;
+  padding: 0 14px;
   text-align: left;
 }
 
@@ -1355,11 +1359,12 @@ textarea {
 .admin-logout-button {
   border-color: rgba(231, 201, 156, 0.48);
   color: var(--gold-light);
+  justify-content: space-between;
   margin-top: auto;
 }
 
 .admin-content {
-  padding: clamp(22px, 4vw, 46px);
+  padding: clamp(28px, 4vw, 44px) clamp(22px, 4vw, 38px);
 }
 
 .admin-topbar {
@@ -1367,7 +1372,73 @@ textarea {
   display: flex;
   gap: 20px;
   justify-content: space-between;
-  margin: 0 0 24px;
+  margin: 0 auto 24px;
+  max-width: 1260px;
+}
+
+.admin-topbar h1 {
+  color: var(--green-dark);
+  font-size: clamp(2rem, 3vw, 2.45rem);
+  margin: 10px 0 8px;
+}
+
+.admin-topbar > div:first-child > span {
+  color: var(--muted);
+  display: block;
+}
+
+.admin-topbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.admin-icon-action,
+.admin-user-button {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid rgba(63, 109, 95, 0.12);
+  border-radius: 999px;
+  box-shadow: 0 14px 34px rgba(48, 77, 68, 0.08);
+  color: var(--ink);
+  display: inline-flex;
+  font-weight: 800;
+  min-height: 52px;
+}
+
+.admin-icon-action {
+  justify-content: center;
+  position: relative;
+  width: 52px;
+}
+
+.admin-icon-action span {
+  align-items: center;
+  background: #ff3b30;
+  border-radius: 999px;
+  color: var(--white);
+  display: inline-flex;
+  font-size: 0.68rem;
+  height: 18px;
+  justify-content: center;
+  position: absolute;
+  right: 7px;
+  top: 4px;
+  width: 18px;
+}
+
+.admin-user-button {
+  gap: 10px;
+  padding: 0 16px 0 8px;
+}
+
+.admin-user-button img {
+  border-radius: 999px;
+  height: 36px;
+  object-fit: cover;
+  width: 36px;
 }
 
 .outline-admin-button {
@@ -1395,8 +1466,9 @@ textarea {
   align-items: start;
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  max-width: 1180px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
+  margin: 0 auto;
+  max-width: 1260px;
 }
 
 .home-settings-grid .admin-panel:first-child {
@@ -1406,7 +1478,7 @@ textarea {
 .admin-panel {
   display: grid;
   gap: 18px;
-  padding: 24px;
+  padding: 22px;
 }
 
 .admin-panel h3 {
@@ -1414,7 +1486,7 @@ textarea {
   color: var(--ink);
   display: flex;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.5rem;
+  font-size: 1.28rem;
   font-weight: 400;
   gap: 10px;
   margin: 0;
@@ -1530,7 +1602,7 @@ textarea {
   display: grid;
   gap: 9px;
   justify-items: center;
-  min-height: 168px;
+  min-height: 190px;
   padding: 24px;
   text-align: center;
 }
@@ -1579,25 +1651,38 @@ textarea {
 }
 
 .admin-dropzone.compact {
-  min-height: 132px;
+  min-height: 154px;
   padding: 18px;
 }
 
 .brand-settings-card {
-  align-items: center;
   display: grid;
   gap: 16px;
-  grid-template-columns: 112px 1fr;
+  grid-template-columns: minmax(130px, 0.35fr) 1fr;
 }
 
-.brand-settings-card > img {
-  aspect-ratio: 1;
+.logo-preview-card {
   background: #fffdfa;
   border: 1px solid rgba(63, 109, 95, 0.13);
   border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  min-height: 154px;
+  padding: 16px;
+}
+
+.logo-preview-card strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.logo-preview-card img {
+  align-self: center;
+  aspect-ratio: 1;
+  background: #fffdfa;
+  justify-self: center;
   object-fit: contain;
-  padding: 12px;
-  width: 112px;
+  width: 96px;
 }
 
 .theme-control-grid,
@@ -1624,6 +1709,51 @@ textarea {
   cursor: pointer;
   min-height: 48px;
   padding: 4px;
+}
+
+.admin-tip-row {
+  align-items: center;
+  background: #f2eee4;
+  border: 1px solid rgba(63, 109, 95, 0.1);
+  border-radius: 8px;
+  color: var(--ink);
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+}
+
+.admin-website-card {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(219, 232, 225, 0.86), rgba(247, 245, 239, 0.86)),
+    #fffdfa;
+  border-radius: 8px;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 140px 1fr;
+  overflow: hidden;
+  padding: 22px;
+}
+
+.admin-website-card img {
+  aspect-ratio: 1;
+  border-radius: 999px;
+  object-fit: cover;
+  width: 120px;
+}
+
+.admin-website-card strong {
+  color: var(--green-dark);
+  display: block;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.admin-website-card p {
+  color: var(--ink);
+  line-height: 1.6;
+  margin: 8px 0 16px;
 }
 
 .client-upload-panel {
