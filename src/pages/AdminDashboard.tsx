@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
-import { CalendarDays, Camera, Gift, Home, Image, Mail, MessageSquare, Plus, Settings, Sparkles, Star, Trash2, UserCheck } from 'lucide-react';
+import { CalendarDays, Gift, Home, Image, ImagePlus, Mail, MessageSquare, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
 import type { AdminSection, Booking, GalleryImage, HomePageImage, Lead, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
@@ -55,9 +55,7 @@ export function AdminDashboard({
   const [homeImageStatus, setHomeImageStatus] = useState('');
   const activeLabel = adminMenuItems.find((item) => item.id === activeSection)?.label ?? 'Admin';
 
-  async function handleHomeImageUpload(event: ChangeEvent<HTMLInputElement>) {
-    const input = event.currentTarget;
-    const files = Array.from(event.target.files ?? []);
+  async function uploadHomeImages(files: File[]) {
     if (!files.length) return;
 
     try {
@@ -66,8 +64,34 @@ export function AdminDashboard({
       setHomeImageStatus('Images uploaded.');
     } catch (error) {
       setHomeImageStatus(error instanceof Error ? error.message : 'Images could not be uploaded.');
-    } finally {
-      input.value = '';
+    }
+  }
+
+  async function handleHomeImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const files = Array.from(event.target.files ?? []);
+    await uploadHomeImages(files);
+    input.value = '';
+  }
+
+  function handleHomeImageFileDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    void uploadHomeImages(Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith('image/')));
+  }
+
+  function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) {
+      onSettingsChange({ ...settings, logoUrl: URL.createObjectURL(file) });
+      event.target.value = '';
+    }
+  }
+
+  function handleLogoDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    const file = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('image/'));
+    if (file) {
+      onSettingsChange({ ...settings, logoUrl: URL.createObjectURL(file) });
     }
   }
 
@@ -104,7 +128,7 @@ export function AdminDashboard({
     <div className="admin-page">
       <aside className="admin-sidebar">
         <div className="admin-sidebar-brand">
-          <img className="brand-logo" src="/homepage/logo-wo-bg.png" alt="" />
+          <img className="brand-logo" src={settings.logoUrl} alt="" />
           <div>
             <strong>K Beauty Salon</strong>
             <span>Admin Panel</span>
@@ -140,19 +164,26 @@ export function AdminDashboard({
         </div>
 
         {activeSection === 'home-page' ? (
-          <div className="admin-grid single">
+          <div className="home-settings-grid">
             <AdminPanel icon={<Home size={20} />} title="Home page carousel">
-              <div className="client-upload-panel">
-                <div>
-                  <strong>Manage homepage images</strong>
-                  <p>Upload images from your computer, drag them to change the carousel order, or delete old images.</p>
-                </div>
-                <label className="small-admin-button">
-                  <Camera size={16} />
-                  Upload Images
-                  <input accept="image/*" multiple type="file" onChange={handleHomeImageUpload} />
-                </label>
-              </div>
+              <label
+                className="admin-dropzone"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleHomeImageFileDrop}
+              >
+                <span>
+                  <UploadCloud size={28} />
+                </span>
+                <strong>Drop homepage images here</strong>
+                <small>or browse from your computer. You can drag slides below to change the order.</small>
+                <b>
+                  <ImagePlus size={16} />
+                  Browse Images
+                </b>
+                <input aria-label="Upload homepage images" accept="image/*" multiple type="file" onChange={handleHomeImageUpload} />
+              </label>
+
+              {homeImageStatus ? <p className="admin-status-text">{homeImageStatus}</p> : null}
 
               <div className="home-image-manager">
                 {homePageImages.map((image, index) => (
@@ -182,7 +213,94 @@ export function AdminDashboard({
                   </div>
                 ))}
               </div>
-              {homeImageStatus ? <p className="admin-status-text">{homeImageStatus}</p> : null}
+            </AdminPanel>
+
+            <AdminPanel icon={<Palette size={20} />} title="Logo and theme">
+              <div className="brand-settings-card">
+                <img src={settings.logoUrl} alt="Current logo preview" />
+                <label
+                  className="admin-dropzone compact"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={handleLogoDrop}
+                >
+                  <span>
+                    <UploadCloud size={22} />
+                  </span>
+                  <strong>Drop logo here</strong>
+                  <small>Transparent PNG works best.</small>
+                  <b>
+                    <ImagePlus size={16} />
+                    Browse Logo
+                  </b>
+                  <input aria-label="Upload logo" accept="image/*" type="file" onChange={handleLogoUpload} />
+                </label>
+              </div>
+
+              <div className="theme-control-grid">
+                <AdminField label="Primary colour">
+                  <div className="color-input-row">
+                    <input
+                      aria-label="Primary colour picker"
+                      type="color"
+                      value={settings.themePrimaryColor}
+                      onChange={(event) => onSettingsChange({ ...settings, themePrimaryColor: event.target.value })}
+                    />
+                    <input
+                      value={settings.themePrimaryColor}
+                      onChange={(event) => onSettingsChange({ ...settings, themePrimaryColor: event.target.value })}
+                    />
+                  </div>
+                </AdminField>
+                <AdminField label="Accent colour">
+                  <div className="color-input-row">
+                    <input
+                      aria-label="Accent colour picker"
+                      type="color"
+                      value={settings.themeAccentColor}
+                      onChange={(event) => onSettingsChange({ ...settings, themeAccentColor: event.target.value })}
+                    />
+                    <input
+                      value={settings.themeAccentColor}
+                      onChange={(event) => onSettingsChange({ ...settings, themeAccentColor: event.target.value })}
+                    />
+                  </div>
+                </AdminField>
+              </div>
+            </AdminPanel>
+
+            <AdminPanel icon={<Settings size={20} />} title="Website details">
+              <div className="website-details-grid">
+                <AdminField label="Phone">
+                  <input value={settings.phone} onChange={(event) => onSettingsChange({ ...settings, phone: event.target.value })} />
+                </AdminField>
+                <AdminField label="Email">
+                  <input value={settings.email} onChange={(event) => onSettingsChange({ ...settings, email: event.target.value })} />
+                </AdminField>
+                <AdminField label="Instagram profile">
+                  <input
+                    value={settings.instagramUrl}
+                    onChange={(event) => onSettingsChange({ ...settings, instagramUrl: event.target.value })}
+                  />
+                </AdminField>
+                <AdminField label="Currency code">
+                  <input
+                    value={settings.currencyCode}
+                    onChange={(event) => onSettingsChange({ ...settings, currencyCode: event.target.value.toUpperCase() })}
+                  />
+                </AdminField>
+                <AdminField label="GST percentage">
+                  <input
+                    min="0"
+                    step="0.01"
+                    type="number"
+                    value={settings.gstPercent}
+                    onChange={(event) => onSettingsChange({ ...settings, gstPercent: Number(event.target.value) })}
+                  />
+                </AdminField>
+                <AdminField label="Address">
+                  <textarea value={settings.address} onChange={(event) => onSettingsChange({ ...settings, address: event.target.value })} />
+                </AdminField>
+              </div>
             </AdminPanel>
           </div>
         ) : null}

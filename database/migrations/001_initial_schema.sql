@@ -169,6 +169,8 @@ create table if not exists public.salon_settings (
   address text,
   currency_code text not null default 'INR',
   gst_percent numeric(5,2) not null default 18.00,
+  theme_primary_color text not null default '#2f5c50',
+  theme_accent_color text not null default '#cc9a53',
   updated_at timestamptz not null default now()
 );
 
@@ -383,8 +385,8 @@ create policy "Staff can delete site assets"
 on storage.objects for delete
 using (bucket_id = 'site-assets' and public.is_admin_or_staff());
 
-insert into public.salon_settings (salon_name, instagram_url, phone, email, address, currency_code, gst_percent)
-select 'K Beauty Salon', 'https://www.instagram.com/kbeautyglamsalon/', '04XX XXX XXX', 'hello@kbeautysalon.com', 'Your salon address will go here once confirmed.', 'INR', 18.00
+insert into public.salon_settings (salon_name, logo_url, instagram_url, phone, email, address, currency_code, gst_percent, theme_primary_color, theme_accent_color)
+select 'K Beauty Salon', '/homepage/logo-wo-bg.png', 'https://www.instagram.com/kbeautyglamsalon/', '04XX XXX XXX', 'hello@kbeautysalon.com', 'Your salon address will go here once confirmed.', 'INR', 18.00, '#2f5c50', '#cc9a53'
 where not exists (select 1 from public.salon_settings);
 
 insert into public.homepage_images (title, image_url, display_order, is_active)

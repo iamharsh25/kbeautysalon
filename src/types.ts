@@ -86,12 +86,15 @@ export type HomePageImageRow = {
 
 export type SiteSettings = {
   heroImage: string;
+  logoUrl: string;
   instagramUrl: string;
   phone: string;
   email: string;
   address: string;
   currencyCode: string;
   gstPercent: number;
+  themePrimaryColor: string;
+  themeAccentColor: string;
 };
 
 export type AdminSection =

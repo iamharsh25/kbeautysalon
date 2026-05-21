@@ -24,7 +24,7 @@ export function BookingPage({ onBack, settings }: { onBack: () => void; settings
     <main className="booking-page">
       <nav className="booking-nav" aria-label="Booking page navigation">
         <button className="booking-brand" type="button" onClick={onBack}>
-          <img className="brand-logo" src="/homepage/logo-wo-bg.png" alt="" />
+          <img className="brand-logo" src={settings.logoUrl} alt="" />
           <span>K Beauty Salon</span>
         </button>
         <div>

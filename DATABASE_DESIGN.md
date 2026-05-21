@@ -211,6 +211,8 @@ Editable website settings.
 - `address text`
 - `currency_code text` default `INR`
 - `gst_percent numeric(5,2)` default `18.00`
+- `theme_primary_color text`
+- `theme_accent_color text`
 - `updated_at timestamptz`
 
 ### client_reviews
@@ -400,6 +402,8 @@ create table public.salon_settings (
   address text,
   currency_code text not null default 'INR',
   gst_percent numeric(5,2) not null default 18.00,
+  theme_primary_color text not null default '#2f5c50',
+  theme_accent_color text not null default '#cc9a53',
   updated_at timestamptz not null default now()
 );
 

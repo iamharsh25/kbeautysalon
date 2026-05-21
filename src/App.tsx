@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   demoClientProfile,
@@ -212,82 +212,90 @@ export function App() {
     navigate('/');
   }
 
+  const themeStyle = {
+    '--green': settings.themePrimaryColor,
+    '--green-dark': settings.themePrimaryColor,
+    '--gold': settings.themeAccentColor,
+  } as CSSProperties;
+
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <HomePage
-            albums={galleryAlbums}
-            homePageImages={homePageImages}
-            isLoginOpen={isLoginOpen}
-            loginError={loginError}
-            services={services}
-            settings={settings}
-            onAlbumOpen={(album) => navigate(`/gallery/${albumSlug(album)}`)}
-            onBookClick={() => navigate('/booking')}
-            onCloseLogin={() => {
-              setIsLoginOpen(false);
-              setLoginError('');
-            }}
-            onLogin={handleLogin}
-            onLoginClick={() => setIsLoginOpen(true)}
-          />
-        }
-      />
-      <Route path="/booking" element={<BookingPage settings={settings} onBack={goHome} />} />
-      <Route
-        path="/gallery/:album"
-        element={
-          <GalleryAlbumRoute
-            onAlbumChange={(album) => navigate(`/gallery/${albumSlug(album)}`)}
-            onBack={goHome}
-          />
-        }
-      />
-      <Route
-        path="/admin"
-        element={
-          <AdminDashboard
-            bookings={bookings}
-            galleryImages={galleryImages}
-            homePageImages={homePageImages}
-            leads={leads}
-            reviews={reviews}
-            services={services}
-            staffMembers={staffMembers}
-            settings={settings}
-            vouchers={vouchers}
-            onBookingChange={setBookings}
-            onGalleryChange={setGalleryImages}
-            onHomePageImageDelete={handleHomePageImageDelete}
-            onHomePageImagesReorder={handleHomePageImagesReorder}
-            onHomePageImagesUpload={handleHomePageImageUpload}
-            onLeadChange={setLeads}
-            onLogout={goHome}
-            onReviewChange={setReviews}
-            onServiceChange={setServices}
-            onStaffChange={setStaffMembers}
-            onSettingsChange={setSettings}
-            onVoucherChange={setVouchers}
-          />
-        }
-      />
-      <Route
-        path="/client"
-        element={
-          <ClientDashboard
-            bookings={bookings}
-            photos={clientPhotos}
-            profile={demoClientProfile}
-            vouchers={vouchers.filter((voucher) => voucher.status === 'Active')}
-            onLogout={goHome}
-            onPhotoAdd={(photo) => setClientPhotos([photo, ...clientPhotos])}
-          />
-        }
-      />
-      <Route path="*" element={<Navigate replace to="/" />} />
-    </Routes>
+    <div style={themeStyle}>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <HomePage
+              albums={galleryAlbums}
+              homePageImages={homePageImages}
+              isLoginOpen={isLoginOpen}
+              loginError={loginError}
+              services={services}
+              settings={settings}
+              onAlbumOpen={(album) => navigate(`/gallery/${albumSlug(album)}`)}
+              onBookClick={() => navigate('/booking')}
+              onCloseLogin={() => {
+                setIsLoginOpen(false);
+                setLoginError('');
+              }}
+              onLogin={handleLogin}
+              onLoginClick={() => setIsLoginOpen(true)}
+            />
+          }
+        />
+        <Route path="/booking" element={<BookingPage settings={settings} onBack={goHome} />} />
+        <Route
+          path="/gallery/:album"
+          element={
+            <GalleryAlbumRoute
+              onAlbumChange={(album) => navigate(`/gallery/${albumSlug(album)}`)}
+              onBack={goHome}
+            />
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminDashboard
+              bookings={bookings}
+              galleryImages={galleryImages}
+              homePageImages={homePageImages}
+              leads={leads}
+              reviews={reviews}
+              services={services}
+              staffMembers={staffMembers}
+              settings={settings}
+              vouchers={vouchers}
+              onBookingChange={setBookings}
+              onGalleryChange={setGalleryImages}
+              onHomePageImageDelete={handleHomePageImageDelete}
+              onHomePageImagesReorder={handleHomePageImagesReorder}
+              onHomePageImagesUpload={handleHomePageImageUpload}
+              onLeadChange={setLeads}
+              onLogout={goHome}
+              onReviewChange={setReviews}
+              onServiceChange={setServices}
+              onStaffChange={setStaffMembers}
+              onSettingsChange={setSettings}
+              onVoucherChange={setVouchers}
+            />
+          }
+        />
+        <Route
+          path="/client"
+          element={
+            <ClientDashboard
+              bookings={bookings}
+              photos={clientPhotos}
+              profile={demoClientProfile}
+              vouchers={vouchers.filter((voucher) => voucher.status === 'Active')}
+              onLogout={goHome}
+              onPhotoAdd={(photo) => setClientPhotos([photo, ...clientPhotos])}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate replace to="/" />} />
+      </Routes>
+    </div>
   );
 }
 

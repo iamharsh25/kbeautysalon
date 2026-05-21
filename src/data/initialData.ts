@@ -264,10 +264,13 @@ export const initialClientPhotos: ClientPhoto[] = [
 
 export const initialSettings: SiteSettings = {
   heroImage: '/homepage/salon.jpg',
+  logoUrl: '/homepage/logo-wo-bg.png',
   instagramUrl: 'https://www.instagram.com/kbeautyglamsalon/',
   phone: '04XX XXX XXX',
   email: 'hello@kbeautysalon.com',
   address: 'Your salon address will go here once confirmed.',
   currencyCode: 'INR',
   gstPercent: 18,
+  themePrimaryColor: '#2f5c50',
+  themeAccentColor: '#cc9a53',
 };

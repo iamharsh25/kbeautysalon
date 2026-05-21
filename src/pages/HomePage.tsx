@@ -36,7 +36,7 @@ export function HomePage({
 }: HomePageProps) {
   return (
     <>
-      <Header onBookClick={onBookClick} onLoginClick={onLoginClick} />
+      <Header logoUrl={settings.logoUrl} onBookClick={onBookClick} onLoginClick={onLoginClick} />
       <main>
         <Hero images={homePageImages} onBookClick={onBookClick} />
         <ServicesPreview services={services} />

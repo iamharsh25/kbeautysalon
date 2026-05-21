@@ -2,13 +2,21 @@ import { useState } from 'react';
 import { Menu } from 'lucide-react';
 import { navItems } from '../../data/initialData';
 
-export function Header({ onBookClick, onLoginClick }: { onBookClick: () => void; onLoginClick: () => void }) {
+export function Header({
+  logoUrl,
+  onBookClick,
+  onLoginClick,
+}: {
+  logoUrl: string;
+  onBookClick: () => void;
+  onLoginClick: () => void;
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <header className="site-header">
       <a className="brand" href="#home" aria-label="K Beauty Salon home">
-        <img className="brand-logo" src="/homepage/logo-wo-bg.png" alt="" />
+        <img className="brand-logo" src={logoUrl} alt="" />
         <span>K Beauty Salon</span>
       </a>
 
