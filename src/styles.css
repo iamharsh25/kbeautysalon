@@ -1364,7 +1364,8 @@ textarea {
 }
 
 .admin-content {
-  padding: clamp(28px, 4vw, 44px) clamp(22px, 4vw, 38px);
+  padding: clamp(20px, 2vw, 32px);
+  width: 100%;
 }
 
 .admin-topbar {
@@ -1372,8 +1373,8 @@ textarea {
   display: flex;
   gap: 20px;
   justify-content: space-between;
-  margin: 0 auto 24px;
-  max-width: 1260px;
+  margin: 0 0 24px;
+  width: 100%;
 }
 
 .admin-topbar h1 {
@@ -1466,9 +1467,8 @@ textarea {
   align-items: start;
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
-  margin: 0 auto;
-  max-width: 1260px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  width: 100%;
 }
 
 .home-settings-grid .admin-panel:first-child {
