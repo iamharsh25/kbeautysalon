@@ -40,7 +40,7 @@ export function App() {
   const [services, setServices] = useState(initialServices);
   const [galleryImages, setGalleryImages] = useState(initialGalleryImages);
   const [bookings, setBookings] = useState(initialBookings);
-  const [customers, setCustomers] = useState(initialCustomers);
+  const [customers, setCustomers] = useState(() => isSupabaseConfigured ? [] : initialCustomers);
   const [reviews, setReviews] = useState(initialReviews);
   const [vouchers, setVouchers] = useState(initialVouchers);
   const [staffMembers, setStaffMembers] = useState(initialStaff);
@@ -59,22 +59,34 @@ export function App() {
     async function loadInitialSupabaseData() {
       if (!isSupabaseConfigured || !supabase) return;
 
-      const [homepageImages, salonSettings, databaseCustomers] = await Promise.all([
-        getHomePageImages(),
-        getSalonSettings(),
-        getCustomers(),
-      ]);
-
-      if (homepageImages.length && isMounted) {
-        setHomePageImages(homepageImages);
+      try {
+        const homepageImages = await getHomePageImages();
+        if (homepageImages.length && isMounted) {
+          setHomePageImages(homepageImages);
+        }
+      } catch (error) {
+        console.error('Homepage images could not be loaded.', error);
       }
 
-      if (salonSettings && isMounted) {
-        setSettings(salonSettings);
+      try {
+        const salonSettings = await getSalonSettings();
+        if (salonSettings && isMounted) {
+          setSettings(salonSettings);
+        }
+      } catch (error) {
+        console.error('Salon settings could not be loaded.', error);
       }
 
-      if (isMounted) {
-        setCustomers(databaseCustomers);
+      try {
+        const databaseCustomers = await getCustomers();
+        if (isMounted) {
+          setCustomers(databaseCustomers);
+        }
+      } catch (error) {
+        console.error('Customers could not be loaded.', error);
+        if (isMounted) {
+          setCustomers([]);
+        }
       }
 
       const { data: userData } = await supabase.auth.getUser();
