@@ -54,6 +54,35 @@ Extra staff details managed by admin.
 - `created_at timestamptz`
 - `updated_at timestamptz`
 
+### customers
+
+Salon customer records managed by admin. These can exist before a client creates a login.
+
+- `id uuid primary key`
+- `profile_id uuid references profiles(id)` nullable auth link
+- `profile_picture_url text`
+- `full_name text`
+- `email text`
+- `mobile text`
+- address fields
+- `notes text`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
+### customer_memberships
+
+Current salon membership for a customer.
+
+- `id uuid primary key`
+- `customer_id uuid references customers(id)`
+- `is_member boolean`
+- `start_date date`
+- `end_date date`
+- `fee_cents integer`
+- `paid_date date`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
 ### contact_info
 
 Leads from public contact forms.
@@ -91,6 +120,7 @@ Salon services.
 Admin/staff-created bookings.
 
 - `id uuid primary key`
+- `customer_id uuid references customers(id)`
 - `client_id uuid references profiles(id)`
 - `staff_id uuid references staff_profiles(id)`
 - `service_id uuid references service_menu(id)`
@@ -100,6 +130,10 @@ Admin/staff-created bookings.
 - `source text` values `admin`, `phone`, `instagram`, `walk_in`, `website_lead`
 - `price_cents integer`
 - `deposit_cents integer`
+- `amount_paid_cents integer`
+- `payment_method text` values `cash`, `card`, `upi`
+- `discount_cents integer`
+- `client_voucher_id uuid references client_vouchers(id)`
 - `client_notes text`
 - `staff_notes text`
 - `created_by uuid references profiles(id)`
@@ -129,10 +163,13 @@ Vouchers assigned to a specific client.
 
 - `id uuid primary key`
 - `voucher_id uuid references vouchers(id)`
+- `customer_id uuid references customers(id)`
 - `client_id uuid references profiles(id)`
 - `assigned_by uuid references profiles(id)`
 - `status text` values `available`, `used`, `expired`, `cancelled`
 - `used_booking_id uuid references booking_details(id)`
+- `starts_at timestamptz`
+- `expires_at timestamptz`
 - `assigned_at timestamptz`
 - `used_at timestamptz`
 

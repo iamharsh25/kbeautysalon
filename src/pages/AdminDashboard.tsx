@@ -1,27 +1,28 @@
 import { useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
-import { CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, MessageSquare, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck, UsersRound } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
-import type { AdminSection, Booking, GalleryImage, HomePageImage, Lead, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
+import type { AdminSection, Booking, Customer, GalleryImage, HomePageImage, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
 import { updateListItem } from '../utils/list';
+import { formatCurrency } from '../utils/format';
 
 export function AdminDashboard({
   adminFullName,
   bookings,
+  customers,
   galleryImages,
   homePageImages,
-  leads,
   reviews,
   services,
   staffMembers,
   settings,
   vouchers,
   onBookingChange,
+  onCustomersChange,
   onGalleryChange,
   onHomePageImageDelete,
   onHomePageImagesReorder,
   onHomePageImagesUpload,
-  onLeadChange,
   onLogout,
   onReviewChange,
   onServiceChange,
@@ -31,20 +32,20 @@ export function AdminDashboard({
 }: {
   adminFullName: string;
   bookings: Booking[];
+  customers: Customer[];
   galleryImages: GalleryImage[];
   homePageImages: HomePageImage[];
-  leads: Lead[];
   reviews: Review[];
   services: Service[];
   staffMembers: StaffMember[];
   settings: SiteSettings;
   vouchers: Voucher[];
   onBookingChange: (bookings: Booking[]) => void;
+  onCustomersChange: (customers: Customer[]) => void;
   onGalleryChange: (galleryImages: GalleryImage[]) => void;
   onHomePageImageDelete: (image: HomePageImage) => void | Promise<void>;
   onHomePageImagesReorder: (images: HomePageImage[]) => void | Promise<void>;
   onHomePageImagesUpload: (files: File[]) => void | Promise<void>;
-  onLeadChange: (leads: Lead[]) => void;
   onLogout: () => void;
   onReviewChange: (reviews: Review[]) => void;
   onServiceChange: (services: Service[]) => void;
@@ -56,6 +57,11 @@ export function AdminDashboard({
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [homeImageStatus, setHomeImageStatus] = useState('');
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [voucherToAssign, setVoucherToAssign] = useState(vouchers.find((voucher) => voucher.status === 'Active')?.code ?? vouchers[0]?.code ?? '');
+  const [voucherStartDate, setVoucherStartDate] = useState('2026-05-21');
+  const [voucherExpiryDate, setVoucherExpiryDate] = useState('2026-08-21');
+  const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
 
   async function uploadHomeImages(files: File[]) {
     if (!files.length) return;
@@ -124,6 +130,63 @@ export function AdminDashboard({
       .catch((error) => {
         setHomeImageStatus(error instanceof Error ? error.message : 'Image could not be deleted.');
       });
+  }
+
+  function handleCreateCustomer(event: ChangeEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const fullName = String(formData.get('fullName') ?? '').trim();
+    const email = String(formData.get('email') ?? '').trim();
+    const mobile = String(formData.get('mobile') ?? '').trim();
+    if (!fullName || (!email && !mobile)) return;
+
+    const nextCustomer: Customer = {
+      id: `customer-${crypto.randomUUID()}`,
+      profilePictureUrl: '/homepage/logo-wo-bg.png',
+      fullName,
+      email,
+      mobile,
+      address: String(formData.get('address') ?? '').trim(),
+      notes: 'New customer profile created by admin.',
+      membership: {
+        isMember: false,
+        startDate: '',
+        endDate: '',
+        fee: 0,
+        paidDate: '',
+      },
+      serviceHistory: [],
+      vouchers: [],
+    };
+
+    onCustomersChange([nextCustomer, ...customers]);
+    setSelectedCustomerId(nextCustomer.id);
+    event.currentTarget.reset();
+  }
+
+  function handleAssignVoucher() {
+    if (!selectedCustomer || !voucherToAssign || !voucherStartDate || !voucherExpiryDate) return;
+    const voucher = vouchers.find((item) => item.code === voucherToAssign);
+    if (!voucher) return;
+
+    onCustomersChange(customers.map((customer) => {
+      if (customer.id !== selectedCustomer.id) return customer;
+
+      return {
+        ...customer,
+        vouchers: [
+          {
+            voucherCode: voucher.code,
+            startDate: voucherStartDate,
+            expiryDate: voucherExpiryDate,
+            status: 'Voucher Not Used',
+            discountType: voucher.discountType ?? (voucher.value.includes('%') ? 'Percentage Off' : 'Amount Off'),
+            discountValue: voucher.discountValue ?? voucher.value,
+          },
+          ...customer.vouchers,
+        ],
+      };
+    }));
   }
 
   return (
@@ -347,26 +410,180 @@ export function AdminDashboard({
           </div>
         ) : null}
 
-        {activeSection === 'new-leads' ? (
-          <AdminPanel icon={<MessageSquare size={20} />} title="New leads">
-            {leads.map((lead, index) => (
-              <div className="admin-row admin-row-stack" key={lead.email}>
-                <div>
-                  <strong>{lead.name}</strong>
-                  <span>{lead.email}</span>
-                  <p>{lead.message}</p>
+        {activeSection === 'customers' ? (
+          <div className="customers-workspace">
+            <AdminPanel icon={<UsersRound size={20} />} title={selectedCustomer ? 'Customer profile' : 'Manage Customers'}>
+              {selectedCustomer ? (
+                <div className="customer-detail">
+                  <button className="back-button admin-back-button" type="button" onClick={() => setSelectedCustomerId('')}>
+                    <ArrowLeft size={16} />
+                    Back to customers
+                  </button>
+                  <div className="customer-profile-card">
+                    <img src={selectedCustomer.profilePictureUrl} alt="" />
+                    <div>
+                      <span>Customer Details</span>
+                      <h2>{selectedCustomer.fullName}</h2>
+                      <p>{selectedCustomer.email}</p>
+                      <p>{selectedCustomer.mobile}</p>
+                      <p>{selectedCustomer.address}</p>
+                    </div>
+                  </div>
+
+                  <div className="customer-detail-grid">
+                    <section className="customer-info-box">
+                      <h3>Membership</h3>
+                      <dl>
+                        <div><dt>Salon Member</dt><dd>{selectedCustomer.membership.isMember ? 'Yes' : 'No'}</dd></div>
+                        <div><dt>Start Date</dt><dd>{selectedCustomer.membership.startDate || 'Not started'}</dd></div>
+                        <div><dt>End Date</dt><dd>{selectedCustomer.membership.endDate || 'Not set'}</dd></div>
+                        <div><dt>Membership Fee</dt><dd>{formatCurrency(selectedCustomer.membership.fee)}</dd></div>
+                        <div><dt>Paid Date</dt><dd>{selectedCustomer.membership.paidDate || 'Not paid'}</dd></div>
+                      </dl>
+                    </section>
+
+                    <section className="customer-info-box">
+                      <h3>Allocate Voucher</h3>
+                      <AdminField label="Voucher">
+                        <select value={voucherToAssign} onChange={(event) => setVoucherToAssign(event.target.value)}>
+                          {vouchers.filter((voucher) => voucher.status === 'Active').map((voucher) => (
+                            <option key={voucher.code} value={voucher.code}>{voucher.code} - {voucher.value}</option>
+                          ))}
+                        </select>
+                      </AdminField>
+                      <div className="customer-voucher-form">
+                        <AdminField label="Start date">
+                          <input type="date" value={voucherStartDate} onChange={(event) => setVoucherStartDate(event.target.value)} />
+                        </AdminField>
+                        <AdminField label="Expiry date">
+                          <input type="date" value={voucherExpiryDate} onChange={(event) => setVoucherExpiryDate(event.target.value)} />
+                        </AdminField>
+                      </div>
+                      <button className="small-admin-button" type="button" onClick={handleAssignVoucher}>
+                        <Gift size={16} />
+                        Allocate Voucher
+                      </button>
+                    </section>
+                  </div>
+
+                  <section className="customer-info-box">
+                    <h3>Services History</h3>
+                    <div className="customer-table-wrap">
+                      <table className="customer-data-table">
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Service Name</th>
+                            <th>Staff Name</th>
+                            <th>Amount Paid</th>
+                            <th>Payment</th>
+                            <th>Discount</th>
+                            <th>Voucher Used</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedCustomer.serviceHistory.length ? selectedCustomer.serviceHistory.map((history) => (
+                            <tr key={`${history.date}-${history.serviceName}`}>
+                              <td>{history.date}</td>
+                              <td>{history.time}</td>
+                              <td>{history.serviceName}</td>
+                              <td>{history.staffName}</td>
+                              <td>{formatCurrency(history.amountPaid)}</td>
+                              <td>{history.paymentMethod}</td>
+                              <td>{formatCurrency(history.discountAmount)}</td>
+                              <td>{history.voucherUsed}</td>
+                            </tr>
+                          )) : (
+                            <tr><td colSpan={8}>No service history yet.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+
+                  <section className="customer-info-box">
+                    <h3>Customer Vouchers</h3>
+                    <div className="customer-table-wrap">
+                      <table className="customer-data-table">
+                        <thead>
+                          <tr>
+                            <th>Voucher Code</th>
+                            <th>Start Date</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                            <th>Discount Type</th>
+                            <th>Discount Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedCustomer.vouchers.length ? selectedCustomer.vouchers.map((voucher, index) => (
+                            <tr key={`${voucher.voucherCode}-${index}`}>
+                              <td>{voucher.voucherCode}</td>
+                              <td>{voucher.startDate}</td>
+                              <td>{voucher.expiryDate}</td>
+                              <td><span className={voucher.status === 'Voucher Used' ? 'status-pill used' : 'status-pill'}>{voucher.status}</span></td>
+                              <td>{voucher.discountType}</td>
+                              <td>{voucher.discountValue}</td>
+                            </tr>
+                          )) : (
+                            <tr><td colSpan={6}>No vouchers assigned yet.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
                 </div>
-                <select
-                  value={lead.status}
-                  onChange={(event) => updateListItem(leads, index, { ...lead, status: event.target.value }, onLeadChange)}
-                >
-                  <option>New</option>
-                  <option>Read</option>
-                  <option>Closed</option>
-                </select>
-              </div>
-            ))}
-          </AdminPanel>
+              ) : (
+                <>
+                  <form className="customer-create-form" onSubmit={handleCreateCustomer}>
+                    <AdminField label="Full Name">
+                      <input name="fullName" placeholder="Customer full name" />
+                    </AdminField>
+                    <AdminField label="Email">
+                      <input name="email" placeholder="customer@example.com" type="email" />
+                    </AdminField>
+                    <AdminField label="Mobile Number">
+                      <input name="mobile" placeholder="98765 43210" />
+                    </AdminField>
+                    <AdminField label="Address">
+                      <input name="address" placeholder="Customer address" />
+                    </AdminField>
+                    <button className="small-admin-button" type="submit">
+                      <Plus size={16} />
+                      Create Customer
+                    </button>
+                  </form>
+
+                  <div className="customer-table-wrap">
+                    <table className="customer-data-table customer-list-table">
+                      <thead>
+                        <tr>
+                          <th>Full Name</th>
+                          <th>Email</th>
+                          <th>Mobile Number</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customers.map((customer) => (
+                          <tr key={customer.id} onClick={() => setSelectedCustomerId(customer.id)}>
+                            <td>
+                              <span className="customer-name-cell">
+                                <img src={customer.profilePictureUrl} alt="" />
+                                {customer.fullName}
+                              </span>
+                            </td>
+                            <td>{customer.email}</td>
+                            <td>{customer.mobile}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </AdminPanel>
+          </div>
         ) : null}
 
         {activeSection === 'bookings' ? (
@@ -595,7 +812,7 @@ export function AdminDashboard({
 
 const adminMenuItems: { id: AdminSection; label: string; icon: ReactNode }[] = [
   { id: 'home-page', label: 'Home page', icon: <Home size={18} /> },
-  { id: 'new-leads', label: 'New Leads', icon: <Mail size={18} /> },
+  { id: 'customers', label: 'Manage Customers', icon: <Mail size={18} /> },
   { id: 'bookings', label: 'Bookings', icon: <CalendarDays size={18} /> },
   { id: 'gallery', label: 'Manage Gallery', icon: <Image size={18} /> },
   { id: 'website-details', label: 'Manage Website Details', icon: <Settings size={18} /> },

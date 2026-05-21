@@ -44,6 +44,8 @@ export type Voucher = {
   description: string;
   value: string;
   status: string;
+  discountType?: 'Amount Off' | 'Percentage Off';
+  discountValue?: string;
 };
 
 export type StaffMember = {
@@ -66,6 +68,47 @@ export type ClientPhoto = {
   category: string;
   image: string;
   notes: string;
+};
+
+export type CustomerServiceHistory = {
+  date: string;
+  time: string;
+  serviceName: string;
+  staffName: string;
+  amountPaid: number;
+  paymentMethod: 'Cash' | 'Card' | 'UPI';
+  discountAmount: number;
+  voucherUsed: string;
+};
+
+export type CustomerVoucher = {
+  voucherCode: string;
+  startDate: string;
+  expiryDate: string;
+  status: 'Voucher Used' | 'Voucher Not Used';
+  discountType: 'Amount Off' | 'Percentage Off';
+  discountValue: string;
+};
+
+export type CustomerMembership = {
+  isMember: boolean;
+  startDate: string;
+  endDate: string;
+  fee: number;
+  paidDate: string;
+};
+
+export type Customer = {
+  id: string;
+  profilePictureUrl: string;
+  fullName: string;
+  email: string;
+  mobile: string;
+  address: string;
+  notes: string;
+  membership: CustomerMembership;
+  serviceHistory: CustomerServiceHistory[];
+  vouchers: CustomerVoucher[];
 };
 
 export type HomePageImage = {
@@ -99,7 +142,7 @@ export type SiteSettings = {
 
 export type AdminSection =
   | 'home-page'
-  | 'new-leads'
+  | 'customers'
   | 'bookings'
   | 'gallery'
   | 'website-details'

@@ -5,9 +5,9 @@ import {
   galleryAlbums,
   initialBookings,
   initialClientPhotos,
+  initialCustomers,
   initialGalleryImages,
   initialHomePageImages,
-  initialLeads,
   initialReviews,
   initialServices,
   initialSettings,
@@ -38,7 +38,7 @@ export function App() {
   const [services, setServices] = useState(initialServices);
   const [galleryImages, setGalleryImages] = useState(initialGalleryImages);
   const [bookings, setBookings] = useState(initialBookings);
-  const [leads, setLeads] = useState(initialLeads);
+  const [customers, setCustomers] = useState(initialCustomers);
   const [reviews, setReviews] = useState(initialReviews);
   const [vouchers, setVouchers] = useState(initialVouchers);
   const [staffMembers, setStaffMembers] = useState(initialStaff);
@@ -274,20 +274,20 @@ export function App() {
             <AdminDashboard
               adminFullName={currentUserFullName}
               bookings={bookings}
+              customers={customers}
               galleryImages={galleryImages}
               homePageImages={homePageImages}
-              leads={leads}
               reviews={reviews}
               services={services}
               staffMembers={staffMembers}
               settings={settings}
               vouchers={vouchers}
               onBookingChange={setBookings}
+              onCustomersChange={setCustomers}
               onGalleryChange={setGalleryImages}
               onHomePageImageDelete={handleHomePageImageDelete}
               onHomePageImagesReorder={handleHomePageImagesReorder}
               onHomePageImagesUpload={handleHomePageImageUpload}
-              onLeadChange={setLeads}
               onLogout={goHome}
               onReviewChange={setReviews}
               onServiceChange={setServices}

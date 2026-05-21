@@ -1,4 +1,4 @@
-import type { Booking, ClientPhoto, ClientProfile, GalleryAlbum, GalleryImage, HomePageImage, Lead, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
+import type { Booking, ClientPhoto, ClientProfile, Customer, GalleryAlbum, GalleryImage, HomePageImage, Lead, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
 
 export const navItems = ['Home', 'About Us', 'Services', 'Gallery', 'Contact Us'];
 
@@ -231,8 +231,96 @@ export const initialReviews: Review[] = [
 ];
 
 export const initialVouchers: Voucher[] = [
-  { code: 'WELCOME10', description: 'Introductory discount for new clients', value: '10%', status: 'Active' },
-  { code: 'GIFT500', description: 'Gift voucher credit', value: '₹500', status: 'Draft' },
+  { code: 'WELCOME10', description: 'Introductory discount for new clients', value: '10%', status: 'Active', discountType: 'Percentage Off', discountValue: '10%' },
+  { code: 'GIFT500', description: 'Gift voucher credit', value: '₹500', status: 'Active', discountType: 'Amount Off', discountValue: '₹500' },
+];
+
+export const initialCustomers: Customer[] = [
+  {
+    id: 'customer-1',
+    profilePictureUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&q=80',
+    fullName: 'Aisha Patel',
+    email: 'aisha@example.com',
+    mobile: '98765 43210',
+    address: '12 Garden Street, Ahmedabad, Gujarat',
+    notes: 'Prefers soft glam makeup and weekend appointments.',
+    membership: {
+      isMember: true,
+      startDate: '2026-01-01',
+      endDate: '2026-12-31',
+      fee: 5000,
+      paidDate: '2026-01-01',
+    },
+    serviceHistory: [
+      {
+        date: '2026-05-10',
+        time: '11:00 AM',
+        serviceName: 'Hair Styling',
+        staffName: 'Kavya Patel',
+        amountPaid: 1500,
+        paymentMethod: 'UPI',
+        discountAmount: 150,
+        voucherUsed: 'WELCOME10',
+      },
+      {
+        date: '2026-04-18',
+        time: '4:30 PM',
+        serviceName: 'Makeup',
+        staffName: 'Mia Chen',
+        amountPaid: 2500,
+        paymentMethod: 'Card',
+        discountAmount: 0,
+        voucherUsed: 'None',
+      },
+    ],
+    vouchers: [
+      {
+        voucherCode: 'WELCOME10',
+        startDate: '2026-05-01',
+        expiryDate: '2026-06-30',
+        status: 'Voucher Used',
+        discountType: 'Percentage Off',
+        discountValue: '10%',
+      },
+      {
+        voucherCode: 'GIFT500',
+        startDate: '2026-05-21',
+        expiryDate: '2026-08-21',
+        status: 'Voucher Not Used',
+        discountType: 'Amount Off',
+        discountValue: '₹500',
+      },
+    ],
+  },
+  {
+    id: 'customer-2',
+    profilePictureUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&q=80',
+    fullName: 'Sophie Martin',
+    email: 'sophie@example.com',
+    mobile: '99887 77665',
+    address: '45 Lake Road, Surat, Gujarat',
+    notes: 'Likes gel nails and natural brow shaping.',
+    membership: {
+      isMember: false,
+      startDate: '',
+      endDate: '',
+      fee: 0,
+      paidDate: '',
+    },
+    serviceHistory: [
+      {
+        date: '2026-05-05',
+        time: '2:00 PM',
+        serviceName: 'Nails',
+        staffName: 'Mia Chen',
+        amountPaid: 1200,
+        paymentMethod: 'Cash',
+        discountAmount: 0,
+        voucherUsed: 'None',
+      },
+    ],
+    vouchers: [],
+  },
 ];
 
 export const initialStaff: StaffMember[] = [

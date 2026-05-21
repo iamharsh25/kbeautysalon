@@ -1773,6 +1773,195 @@ textarea {
   margin: 8px 0 16px;
 }
 
+.customers-workspace {
+  width: 100%;
+}
+
+.customer-create-form {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+}
+
+.customer-table-wrap {
+  border: 1px solid rgba(63, 109, 95, 0.12);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.customer-data-table {
+  border-collapse: collapse;
+  min-width: 760px;
+  width: 100%;
+}
+
+.customer-data-table th,
+.customer-data-table td {
+  border-bottom: 1px solid rgba(63, 109, 95, 0.1);
+  color: var(--ink);
+  padding: 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.customer-data-table th {
+  background: #f8f5ef;
+  color: var(--green-dark);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customer-data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.customer-list-table tbody tr {
+  cursor: pointer;
+}
+
+.customer-list-table tbody tr:hover {
+  background: rgba(219, 232, 225, 0.34);
+}
+
+.customer-name-cell {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 10px;
+}
+
+.customer-name-cell img,
+.customer-profile-card img {
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.customer-name-cell img {
+  height: 38px;
+  width: 38px;
+}
+
+.customer-detail {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-back-button {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-self: start;
+}
+
+.customer-profile-card {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(219, 232, 225, 0.78), rgba(247, 245, 239, 0.92)),
+    #fffdfa;
+  border: 1px solid rgba(63, 109, 95, 0.12);
+  border-radius: 8px;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 112px 1fr;
+  padding: 22px;
+}
+
+.customer-profile-card img {
+  height: 96px;
+  width: 96px;
+}
+
+.customer-profile-card span {
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.customer-profile-card h2 {
+  color: var(--green-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 400;
+  margin: 6px 0 10px;
+}
+
+.customer-profile-card p {
+  color: var(--ink);
+  margin: 4px 0;
+}
+
+.customer-detail-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.customer-info-box {
+  background: #fffdfa;
+  border: 1px solid rgba(63, 109, 95, 0.12);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.customer-info-box h3 {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.customer-info-box dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.customer-info-box dl div {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.customer-info-box dt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.customer-info-box dd {
+  color: var(--ink);
+  font-weight: 800;
+  margin: 0;
+  text-align: right;
+}
+
+.customer-voucher-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.status-pill {
+  background: rgba(47, 92, 80, 0.1);
+  border-radius: 999px;
+  color: var(--green-dark);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 6px 10px;
+}
+
+.status-pill.used {
+  background: rgba(204, 154, 83, 0.16);
+  color: #9a6a26;
+}
+
 .client-upload-panel {
   align-items: center;
   background: linear-gradient(135deg, rgba(219, 232, 225, 0.8), rgba(231, 201, 156, 0.18));
@@ -1949,7 +2138,9 @@ textarea {
   .admin-grid,
   .admin-grid.single,
   .home-settings-grid,
-  .website-details-grid {
+  .website-details-grid,
+  .customer-create-form,
+  .customer-detail-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2061,11 +2252,14 @@ textarea {
   }
 
   .brand-settings-card,
-  .color-input-row {
+  .color-input-row,
+  .customer-profile-card,
+  .customer-voucher-form {
     grid-template-columns: 1fr;
   }
 
-  .brand-settings-card > img {
+  .brand-settings-card > img,
+  .customer-profile-card img {
     justify-self: center;
   }
 
