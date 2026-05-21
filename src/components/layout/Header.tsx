@@ -6,10 +6,12 @@ export function Header({
   logoUrl,
   onBookClick,
   onLoginClick,
+  onServicesClick,
 }: {
   logoUrl: string;
   onBookClick: () => void;
   onLoginClick: () => void;
+  onServicesClick?: () => void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -22,9 +24,13 @@ export function Header({
 
       <nav className="desktop-nav" aria-label="Main navigation">
         {navItems.map((item) => (
-          <a key={item} href={`#${item.toLowerCase().replaceAll(' ', '-')}`}>
-            {item}
-          </a>
+          item === 'Services' && onServicesClick ? (
+            <button key={item} type="button" onClick={onServicesClick}>{item}</button>
+          ) : (
+            <a key={item} href={`#${item.toLowerCase().replaceAll(' ', '-')}`}>
+              {item}
+            </a>
+          )
         ))}
         <button className="nav-login-button" type="button" onClick={onBookClick}>Book Now</button>
         <button className="nav-login-button" type="button" onClick={onLoginClick}>Login</button>
@@ -43,13 +49,27 @@ export function Header({
       {isMenuOpen ? (
         <nav className="mobile-nav" aria-label="Mobile navigation">
           {navItems.map((item) => (
-            <a
-              key={item}
-              href={`#${item.toLowerCase().replaceAll(' ', '-')}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              {item}
-            </a>
+            item === 'Services' && onServicesClick ? (
+              <button
+                className="mobile-nav-link"
+                key={item}
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onServicesClick();
+                }}
+              >
+                {item}
+              </button>
+            ) : (
+              <a
+                key={item}
+                href={`#${item.toLowerCase().replaceAll(' ', '-')}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                {item}
+              </a>
+            )
           ))}
           <button
             className="mobile-login-button"

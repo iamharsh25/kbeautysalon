@@ -2,7 +2,15 @@ import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import type { HomePageImage } from '../../types';
 
-export function Hero({ images, onBookClick }: { images: HomePageImage[]; onBookClick: () => void }) {
+export function Hero({
+  images,
+  onBookClick,
+  onServicesClick,
+}: {
+  images: HomePageImage[];
+  onBookClick: () => void;
+  onServicesClick: () => void;
+}) {
   const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
@@ -41,7 +49,7 @@ export function Hero({ images, onBookClick }: { images: HomePageImage[]; onBookC
             Book Appointment
             <ArrowRight size={18} />
           </button>
-          <a className="secondary-link" href="#services">Services</a>
+          <button className="secondary-link" type="button" onClick={onServicesClick}>Services</button>
         </div>
         <div className="hero-dots" aria-label="Carousel slide controls">
           {images.map((image, index) => (

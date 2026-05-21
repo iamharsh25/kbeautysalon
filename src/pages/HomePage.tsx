@@ -19,6 +19,7 @@ type HomePageProps = {
   onCloseLogin: () => void;
   onLogin: (email: string, password: string) => void | Promise<void>;
   onLoginClick: () => void;
+  onServicesClick: () => void;
 };
 
 export function HomePage({
@@ -31,15 +32,16 @@ export function HomePage({
   onCloseLogin,
   onLogin,
   onLoginClick,
+  onServicesClick,
   services,
   settings,
 }: HomePageProps) {
   return (
     <>
-      <Header logoUrl={settings.logoUrl} onBookClick={onBookClick} onLoginClick={onLoginClick} />
+      <Header logoUrl={settings.logoUrl} onBookClick={onBookClick} onLoginClick={onLoginClick} onServicesClick={onServicesClick} />
       <main>
-        <Hero images={homePageImages} onBookClick={onBookClick} />
-        <ServicesPreview services={services} />
+        <Hero images={homePageImages} onBookClick={onBookClick} onServicesClick={onServicesClick} />
+        <ServicesPreview services={services} onViewAll={onServicesClick} />
         <FounderStory />
         <GalleryPreview albums={albums} instagramUrl={settings.instagramUrl} onAlbumOpen={onAlbumOpen} />
       </main>

@@ -20,6 +20,7 @@ import { BookingPage } from './pages/BookingPage';
 import { ClientDashboard } from './pages/ClientDashboard';
 import { GalleryAlbumPage } from './pages/GalleryAlbumPage';
 import { HomePage } from './pages/HomePage';
+import { ServicesPage } from './pages/ServicesPage';
 import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
 import { deleteHomePageImage, getHomePageImages, reorderHomePageImages, uploadHomePageImages } from './services/homePageService';
 import { getSalonSettings, updateSalonSettings } from './services/salonSettingsService';
@@ -274,6 +275,19 @@ export function App() {
                 setLoginError('');
               }}
               onLogin={handleLogin}
+              onLoginClick={() => setIsLoginOpen(true)}
+              onServicesClick={() => navigate('/services')}
+            />
+          }
+        />
+        <Route
+          path="/services"
+          element={
+            <ServicesPage
+              services={services}
+              settings={settings}
+              onBack={goHome}
+              onBookClick={() => navigate('/booking')}
               onLoginClick={() => setIsLoginOpen(true)}
             />
           }
