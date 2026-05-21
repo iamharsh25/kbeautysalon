@@ -1,6 +1,6 @@
 import { useEffect, useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, Palette, Pencil, Plus, Save, Search, Settings, Sparkles, Star, Tags, Trash2, UploadCloud, UserCheck, UsersRound, X } from 'lucide-react';
+import { ArrowLeft, Brush, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Flower2, Gift, Globe2, GripVertical, Hand, Home, Image, ImagePlus, LogOut, Mail, MoreVertical, Palette, Pencil, Plus, Save, Scissors, Search, Settings, Sparkles, Star, Tags, Trash2, UploadCloud, UserCheck, UsersRound, WandSparkles, X } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
 import type { AdminSection, Booking, Customer, CustomerVoucher, GalleryImage, HomePageImage, Review, Service, ServiceCategory, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
@@ -110,6 +110,9 @@ export function AdminDashboard({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newSubCategoryNames, setNewSubCategoryNames] = useState<Record<number, string>>({});
   const [categoryStatus, setCategoryStatus] = useState('');
+  const [selectedCategoryIndex, setSelectedCategoryIndex] = useState(0);
+  const [categoryModalTab, setCategoryModalTab] = useState<'categories' | 'sub-categories'>('categories');
+  const [categorySearch, setCategorySearch] = useState('');
   const navigate = useNavigate();
   const { adminSection, customerId } = useParams();
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
@@ -123,6 +126,16 @@ export function AdminDashboard({
       .includes(normalizedCustomerSearch);
   });
   const serviceCategoryOptions = ['All Categories', ...serviceCategories.map((category) => category.name)];
+  const normalizedCategorySearch = categorySearch.trim().toLowerCase();
+  const filteredServiceCategories = serviceCategories
+    .map((category, index) => ({ category, index }))
+    .filter(({ category }) => {
+      if (!normalizedCategorySearch) return true;
+      return [category.name, ...category.subCategories.map((subCategory) => subCategory.name)]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedCategorySearch);
+    });
   const normalizedServiceSearch = serviceSearch.trim().toLowerCase();
   const normalizedServices = services
     .map((service, index) => normalizeAdminService(service, index))
@@ -556,13 +569,15 @@ export function AdminDashboard({
   function handleAddCategory() {
     const name = newCategoryName.trim();
     if (!name || serviceCategories.some((category) => category.name.toLowerCase() === name.toLowerCase())) return;
-    onServiceCategoriesChange([
+    const nextCategories = [
       ...serviceCategories,
       {
         name,
         subCategories: [],
       },
-    ]);
+    ];
+    onServiceCategoriesChange(nextCategories);
+    setSelectedCategoryIndex(nextCategories.length - 1);
     setNewCategoryName('');
     setCategoryStatus('Category added. Click Save Categories to publish.');
   }
@@ -642,7 +657,9 @@ export function AdminDashboard({
           void onServiceDelete(service, index);
         });
         onServiceChange(services.filter((service) => service.category !== category.name));
-        onServiceCategoriesChange(serviceCategories.filter((_, index) => index !== categoryIndex));
+        const nextCategories = serviceCategories.filter((_, index) => index !== categoryIndex);
+        onServiceCategoriesChange(nextCategories);
+        setSelectedCategoryIndex(Math.max(0, Math.min(selectedCategoryIndex, nextCategories.length - 1)));
         if (serviceCategoryFilter === category.name) setServiceCategoryFilter('All Categories');
         setCategoryStatus('Category deleted. Click Save Categories to publish.');
       },
@@ -666,6 +683,15 @@ export function AdminDashboard({
     } catch (error) {
       setCategoryStatus(error instanceof Error ? error.message : 'Categories could not be saved.');
     }
+  }
+
+  function getCategoryIcon(categoryName: string) {
+    const name = categoryName.toLowerCase();
+    if (name.includes('hair')) return <Scissors size={20} />;
+    if (name.includes('make')) return <WandSparkles size={20} />;
+    if (name.includes('nail')) return <Hand size={20} />;
+    if (name.includes('beauty') || name.includes('treatment')) return <Flower2 size={20} />;
+    return <Brush size={20} />;
   }
 
   return (
@@ -1583,58 +1609,200 @@ export function AdminDashboard({
             <button className="modal-close" type="button" onClick={() => setIsCategoryModalOpen(false)} aria-label="Close categories modal">
               x
             </button>
-            <p>Service Management</p>
-            <h2>Manage Categories</h2>
-            <div className="category-create-row">
-              <AdminField label="Category Name">
-                <input value={newCategoryName} placeholder="Category name" onChange={(event) => setNewCategoryName(event.target.value)} />
-              </AdminField>
-              <button className="small-admin-button" type="button" onClick={handleAddCategory}>
-                <Plus size={16} />
-                Add Category
+            <div className="category-modal-header">
+              <p>Service Category</p>
+              <h2>Manage Categories</h2>
+              <span>Organize your salon services with categories and separate sub categories.</span>
+            </div>
+            <div className="category-modal-tabs" aria-label="Category modal sections">
+              <button className={categoryModalTab === 'categories' ? 'active' : ''} type="button" onClick={() => setCategoryModalTab('categories')}>
+                <Tags size={16} />
+                Categories
               </button>
-              <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleSaveCategories}>
-                <Save size={16} />
-                Save Categories
+              <button
+                className={categoryModalTab === 'sub-categories' ? 'active' : ''}
+                type="button"
+                onClick={() => {
+                  setSelectedCategoryIndex(Math.min(selectedCategoryIndex, Math.max(serviceCategories.length - 1, 0)));
+                  setCategoryModalTab('sub-categories');
+                }}
+              >
+                <Sparkles size={16} />
+                Sub Categories
               </button>
             </div>
             {categoryStatus ? <p className="admin-status-text">{categoryStatus}</p> : null}
-            <div className="category-list">
-              {serviceCategories.map((category, index) => (
-                <div className="category-row" key={`${category.name}-${index}`}>
-                  <div className="category-row-header">
-                    <AdminField label="Category">
-                      <input value={category.name} onChange={(event) => updateCategoryName(index, event.target.value)} />
-                    </AdminField>
-                    <button className="danger-admin-button" type="button" onClick={() => handleDeleteCategory(index)}>
-                      <Trash2 size={16} />
-                      Delete Category
+            {categoryModalTab === 'categories' ? (
+              <>
+                <div className="category-modal-section">
+                  <div>
+                    <h3>Add New Category</h3>
+                    <span>Create a main category for your services.</span>
+                  </div>
+                  <div className="category-create-row">
+                    <input value={newCategoryName} placeholder="Enter category name" onChange={(event) => setNewCategoryName(event.target.value)} />
+                    <button className="small-admin-button" type="button" onClick={handleAddCategory}>
+                      <Plus size={16} />
+                      Add Category
                     </button>
                   </div>
-                  <div className="sub-category-manager">
-                    <strong>Sub Categories</strong>
-                    {category.subCategories.length ? category.subCategories.map((subCategory, subCategoryIndex) => (
-                      <div className="sub-category-row" key={`${category.name}-${subCategory.name}-${subCategoryIndex}`}>
-                        <input value={subCategory.name} onChange={(event) => updateSubCategory(index, subCategoryIndex, event.target.value)} />
-                        <button className="icon-admin-button danger" type="button" aria-label={`Delete ${subCategory.name}`} onClick={() => deleteSubCategory(index, subCategoryIndex)}>
+                </div>
+                <div className="category-modal-section">
+                  <div className="category-section-heading">
+                    <div>
+                      <h3>Existing Categories</h3>
+                      <span>Edit category names or select one before opening sub categories.</span>
+                    </div>
+                    <label className="category-search-field">
+                      <Search size={16} />
+                      <input value={categorySearch} placeholder="Search categories..." onChange={(event) => setCategorySearch(event.target.value)} />
+                    </label>
+                  </div>
+                  <div className="category-card-list">
+                    {filteredServiceCategories.length ? filteredServiceCategories.map(({ category, index }) => (
+                      <div
+                        className={selectedCategoryIndex === index ? 'category-card-row active' : 'category-card-row'}
+                        key={`${category.id ?? category.name}-${index}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedCategoryIndex(index)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') setSelectedCategoryIndex(index);
+                        }}
+                      >
+                        <GripVertical size={16} />
+                        <span className="category-icon-tile">{getCategoryIcon(category.name)}</span>
+                        <span className="category-card-copy">
+                          <input
+                            aria-label={`${category.name || 'Category'} name`}
+                            value={category.name}
+                            onChange={(event) => updateCategoryName(index, event.target.value)}
+                            onClick={(event) => event.stopPropagation()}
+                          />
+                          <small>{category.subCategories.length} sub categor{category.subCategories.length === 1 ? 'y' : 'ies'} configured</small>
+                        </span>
+                        <span className="category-count-badge">{category.subCategories.length}</span>
+                        <span className="category-card-label">Sub categories</span>
+                        <button
+                          className="outline-admin-button category-manage-button"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedCategoryIndex(index);
+                            setCategoryModalTab('sub-categories');
+                          }}
+                        >
+                          Manage
+                        </button>
+                        <button
+                          className="icon-admin-button danger"
+                          type="button"
+                          aria-label={`Delete ${category.name}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteCategory(index);
+                          }}
+                        >
                           <Trash2 size={15} />
                         </button>
+                        <MoreVertical size={16} />
                       </div>
-                    )) : <span>No sub categories yet.</span>}
-                    <div className="sub-category-add-row">
-                      <input
-                        value={newSubCategoryNames[index] ?? ''}
-                        placeholder="Add sub category"
-                        onChange={(event) => setNewSubCategoryNames({ ...newSubCategoryNames, [index]: event.target.value })}
-                      />
-                      <button className="small-admin-button" type="button" onClick={() => addSubCategory(index)}>
-                        <Plus size={16} />
-                        Add
-                      </button>
-                    </div>
+                    )) : (
+                      <div className="empty-admin-state">
+                        <strong>{serviceCategories.length ? 'No matching categories' : 'No categories yet'}</strong>
+                        <span>{serviceCategories.length ? 'Try another search term.' : 'Add your first category above, then create sub categories for it.'}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+              </>
+            ) : (
+              <div className="category-modal-section sub-category-workspace">
+                <div className="category-section-heading">
+                  <div>
+                    <h3>Manage Sub Categories</h3>
+                    <span>Pick one category, then add or edit its sub categories.</span>
+                  </div>
+                  <label className="category-search-field">
+                    <Search size={16} />
+                    <input value={categorySearch} placeholder="Search categories..." onChange={(event) => setCategorySearch(event.target.value)} />
+                  </label>
+                </div>
+                <div className="sub-category-layout">
+                  <div className="sub-category-category-list" aria-label="Categories">
+                    {filteredServiceCategories.length ? filteredServiceCategories.map(({ category, index }) => (
+                      <button
+                        className={selectedCategoryIndex === index ? 'sub-category-category-card active' : 'sub-category-category-card'}
+                        key={`${category.id ?? category.name}-sub-${index}`}
+                        type="button"
+                        onClick={() => setSelectedCategoryIndex(index)}
+                      >
+                        <span className="category-icon-tile">{getCategoryIcon(category.name)}</span>
+                        <span>
+                          <strong>{category.name || 'Untitled Category'}</strong>
+                          <small>{category.subCategories.length} sub categor{category.subCategories.length === 1 ? 'y' : 'ies'}</small>
+                        </span>
+                        <span className="category-count-badge">{category.subCategories.length}</span>
+                      </button>
+                    )) : (
+                      <div className="empty-admin-state">
+                        <strong>No categories found</strong>
+                        <span>Add a category first or change your search.</span>
+                      </div>
+                    )}
+                  </div>
+                  {serviceCategories[selectedCategoryIndex] ? (
+                    <div className="sub-category-detail-panel">
+                      <div>
+                        <h3>{serviceCategories[selectedCategoryIndex].name || 'Selected Category'}</h3>
+                        <span>Add each sub category as its own item.</span>
+                      </div>
+                      <div className="sub-category-list">
+                        {serviceCategories[selectedCategoryIndex].subCategories.length ? serviceCategories[selectedCategoryIndex].subCategories.map((subCategory, subCategoryIndex) => (
+                          <div className="sub-category-row" key={`${serviceCategories[selectedCategoryIndex].name}-${subCategory.name}-${subCategoryIndex}`}>
+                            <input value={subCategory.name} onChange={(event) => updateSubCategory(selectedCategoryIndex, subCategoryIndex, event.target.value)} />
+                            <button className="icon-admin-button danger" type="button" aria-label={`Delete ${subCategory.name}`} onClick={() => deleteSubCategory(selectedCategoryIndex, subCategoryIndex)}>
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        )) : <span className="muted-line">No sub categories yet.</span>}
+                      </div>
+                      <div className="sub-category-add-row">
+                        <input
+                          value={newSubCategoryNames[selectedCategoryIndex] ?? ''}
+                          placeholder="Enter sub category name"
+                          onChange={(event) => setNewSubCategoryNames({ ...newSubCategoryNames, [selectedCategoryIndex]: event.target.value })}
+                        />
+                        <button className="small-admin-button" type="button" onClick={() => addSubCategory(selectedCategoryIndex)}>
+                          <Plus size={16} />
+                          Add Sub Category
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="sub-category-detail-panel">
+                      <div className="empty-admin-state">
+                        <strong>No category selected</strong>
+                        <span>Create or select a category to manage sub categories.</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="category-tip-row">
+              <Sparkles size={18} />
+              <div>
+                <strong>Tip</strong>
+                <span>Save categories after changes so your website and service forms stay in sync with the database.</span>
+              </div>
+            </div>
+            <div className="category-modal-actions">
+              <button className="outline-admin-button cancel-admin-button" type="button" onClick={() => setIsCategoryModalOpen(false)}>Close</button>
+              <button className="small-admin-button" type="button" onClick={handleSaveCategories}>
+                <Save size={16} />
+                Save Categories
+              </button>
             </div>
           </div>
         </div>
@@ -1755,12 +1923,7 @@ export function AdminDashboard({
 const adminMenuItems: { id: AdminSection; label: string; icon: ReactNode }[] = [
   { id: 'home-page', label: 'Home page', icon: <Home size={18} /> },
   { id: 'customers', label: 'Manage Customers', icon: <Mail size={18} /> },
-  { id: 'bookings', label: 'Bookings', icon: <CalendarDays size={18} /> },
-  { id: 'gallery', label: 'Manage Gallery', icon: <Image size={18} /> },
-  { id: 'website-details', label: 'Manage Website Details', icon: <Settings size={18} /> },
   { id: 'services', label: 'Manage Service', icon: <Sparkles size={18} /> },
-  { id: 'staff', label: 'Manage Staff', icon: <UserCheck size={18} /> },
-  { id: 'reviews', label: 'Client Review', icon: <Star size={18} /> },
   { id: 'vouchers', label: 'Voucher Management', icon: <Gift size={18} /> },
 ];
 
