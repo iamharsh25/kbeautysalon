@@ -6,6 +6,7 @@ type ServiceMenuRow = {
   name: string;
   slug: string;
   category: string;
+  sub_category?: string | null;
   description: string | null;
   duration_minutes: number;
   price_cents: number;
@@ -17,7 +18,7 @@ type ServiceMenuRow = {
   max_price_cents?: number | null;
 };
 
-const SERVICE_COLUMNS = 'id,name,slug,category,description,duration_minutes,price_cents,image_url,is_active,display_order,service_type,min_price_cents,max_price_cents';
+const SERVICE_COLUMNS = 'id,name,slug,category,sub_category,description,duration_minutes,price_cents,image_url,is_active,display_order,service_type,min_price_cents,max_price_cents';
 
 function slugify(value: string) {
   return value
@@ -49,6 +50,7 @@ function mapService(row: ServiceMenuRow): Service {
     price: formatServicePrice({ serviceType, fixedPrice, minPrice, maxPrice, price: '' }),
     image: row.image_url || '/homepage/salon.jpg',
     category: row.category,
+    subCategory: row.sub_category || '',
     serviceType,
     fixedPrice,
     minPrice,
@@ -71,6 +73,7 @@ function toPayload(service: Service) {
     name: service.title,
     slug: slugify(service.title),
     category: service.category || 'Hair Style',
+    sub_category: service.subCategory || null,
     description: service.description,
     duration_minutes: 60,
     price_cents: Math.round(fixedPrice * 100),
@@ -91,6 +94,7 @@ export function normalizeService(service: Service, fallbackOrder = 0): Service {
   const normalizedService = {
     ...service,
     category: service.category || 'Hair Style',
+    subCategory: service.subCategory || '',
     serviceType,
     fixedPrice,
     minPrice: service.minPrice ?? fixedPrice,

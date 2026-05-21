@@ -1894,6 +1894,14 @@ textarea {
   justify-content: space-between;
 }
 
+.services-admin-header > div:last-child {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .services-admin-header h2 {
   color: var(--ink);
   font-size: clamp(1.9rem, 3vw, 2.5rem);
@@ -1904,6 +1912,12 @@ textarea {
 .service-table-toolbar > span,
 .service-editor-side small {
   color: var(--muted);
+}
+
+.service-category-button {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
 }
 
 .service-stats-grid {
@@ -2080,6 +2094,70 @@ textarea {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+}
+
+.service-pagination {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.service-pagination span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.service-pagination div {
+  display: flex;
+  gap: 8px;
+}
+
+.service-pagination button {
+  align-items: center;
+  background: #fbfaf7;
+  border: 1px solid rgba(63, 109, 95, 0.14);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  height: 36px;
+  justify-content: center;
+  min-width: 36px;
+}
+
+.service-pagination button.active {
+  background: var(--green-dark);
+  color: var(--white);
+}
+
+.service-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.service-admin-modal,
+.category-admin-modal {
+  width: min(100%, 980px);
+}
+
+.category-create-row,
+.category-row {
+  align-items: end;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) auto;
+}
+
+.category-list {
+  display: grid;
+  gap: 14px;
+}
+
+.category-row {
+  border-top: 1px solid rgba(63, 109, 95, 0.12);
+  padding-top: 14px;
 }
 
 .customer-list-actions {
@@ -2556,6 +2634,8 @@ textarea {
   .service-stats-grid,
   .service-editor-grid,
   .service-price-grid,
+  .category-create-row,
+  .category-row,
   .customer-create-form,
   .customer-edit-card,
   .customer-edit-grid,
@@ -2620,11 +2700,13 @@ textarea {
   }
 
   .services-admin-header,
-  .service-table-toolbar {
+  .service-table-toolbar,
+  .service-pagination {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .services-admin-header > div:last-child,
   .service-table-toolbar > div {
     justify-content: stretch;
   }

@@ -5,6 +5,7 @@ export type Service = {
   price: string;
   image: string;
   category?: string;
+  subCategory?: string;
   serviceType?: 'Fixed Price' | 'Price Range' | 'Contact for Price';
   fixedPrice?: number;
   minPrice?: number;
