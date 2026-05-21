@@ -167,6 +167,19 @@ Images uploaded into public gallery albums.
 - `created_at timestamptz`
 - `updated_at timestamptz`
 
+### homepage_images
+
+Homepage carousel images managed by admin.
+
+- `id uuid primary key`
+- `title text`
+- `image_url text`
+- `storage_path text`
+- `display_order integer`
+- `is_active boolean`
+- `created_at timestamptz`
+- `updated_at timestamptz`
+
 ### client_gallery
 
 Private photos uploaded by clients for style memory.
@@ -350,6 +363,17 @@ create table public.gallery_images (
   updated_at timestamptz not null default now()
 );
 
+create table public.homepage_images (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  image_url text not null,
+  storage_path text,
+  display_order integer not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table public.client_gallery (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles(id) on delete cascade,
@@ -399,6 +423,7 @@ alter table public.vouchers enable row level security;
 alter table public.client_vouchers enable row level security;
 alter table public.gallery_albums enable row level security;
 alter table public.gallery_images enable row level security;
+alter table public.homepage_images enable row level security;
 alter table public.client_gallery enable row level security;
 alter table public.salon_settings enable row level security;
 alter table public.client_reviews enable row level security;
@@ -418,6 +443,10 @@ using (exists (
   where gallery_albums.id = gallery_images.album_id
   and gallery_albums.is_public = true
 ));
+
+create policy "Public can view active homepage images"
+on public.homepage_images for select
+using (is_active = true);
 
 create policy "Public can view salon settings"
 on public.salon_settings for select
@@ -457,6 +486,7 @@ Add helper functions before launch, then policies that allow `profiles.role in (
 - `client_vouchers`
 - `gallery_albums`
 - `gallery_images`
+- `homepage_images`
 - `client_gallery`
 - `salon_settings`
 - `client_reviews`
@@ -470,3 +500,5 @@ Use Supabase Storage buckets:
 - `public-gallery`: public album images uploaded by admin.
 - `client-gallery`: private client uploads. Clients can upload their own files; staff/admin can view for service history.
 - `site-assets`: logo, hero images, and website images.
+
+The `site-assets` bucket should be public for reads and limited to admin/staff for uploads, updates, and deletes.

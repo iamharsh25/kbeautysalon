@@ -1503,6 +1503,12 @@ textarea {
   color: #9d4238;
 }
 
+.admin-status-text {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 2px 0 0;
+}
+
 .client-upload-panel {
   align-items: center;
   background: linear-gradient(135deg, rgba(219, 232, 225, 0.8), rgba(231, 201, 156, 0.18));
@@ -1602,6 +1608,55 @@ textarea {
 .voucher-card p {
   color: rgba(255, 255, 255, 0.78);
   margin: 0;
+}
+
+.home-image-manager {
+  display: grid;
+  gap: 14px;
+}
+
+.home-image-row {
+  align-items: center;
+  background: #fffdfa;
+  border: 1px solid rgba(63, 109, 95, 0.13);
+  border-radius: 8px;
+  cursor: grab;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto 110px 1fr auto;
+  padding: 12px;
+}
+
+.home-image-row:active {
+  cursor: grabbing;
+}
+
+.home-image-row img {
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  display: block;
+  object-fit: cover;
+  width: 110px;
+}
+
+.home-image-row strong,
+.home-image-row small {
+  display: block;
+}
+
+.home-image-row small,
+.drag-handle {
+  color: var(--muted);
+}
+
+.drag-handle {
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.danger-admin-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 @media (max-width: 980px) {
@@ -1733,6 +1788,19 @@ textarea {
 
   .booking-summary-service b {
     grid-column: 2;
+  }
+
+  .home-image-row {
+    grid-template-columns: auto 86px 1fr;
+  }
+
+  .home-image-row img {
+    width: 86px;
+  }
+
+  .home-image-row .danger-admin-button {
+    grid-column: 2 / -1;
+    width: 100%;
   }
 
   .booking-time-heading,

@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, ReactNode, useEffect, useState } from 'react';
+import { ChangeEvent, DragEvent, FormEvent, ReactNode, useEffect, useState } from 'react';
 import {
   ArrowRight,
   CalendarDays,
@@ -95,6 +95,22 @@ type ClientPhoto = {
   category: string;
   image: string;
   notes: string;
+};
+
+type HomePageImage = {
+  id: string;
+  title: string;
+  url: string;
+  storagePath?: string | null;
+  displayOrder: number;
+};
+
+type HomePageImageRow = {
+  id: string;
+  title: string;
+  image_url: string;
+  storage_path: string | null;
+  display_order: number;
 };
 
 type SiteSettings = {
@@ -307,6 +323,13 @@ const galleryAlbums: GalleryAlbum[] = [
   },
 ];
 
+const initialHomePageImages: HomePageImage[] = [
+  { id: 'hero-1', title: 'Salon interior', url: '/homepage/salon.jpg', displayOrder: 0 },
+  { id: 'hero-2', title: 'Styling station', url: '/homepage/salon_1.jpg', displayOrder: 1 },
+  { id: 'hero-3', title: 'Salon detail', url: '/homepage/salon_2.jpg', displayOrder: 2 },
+  { id: 'hero-4', title: 'Beauty room', url: '/homepage/salon_3.jpg', displayOrder: 3 },
+];
+
 const initialBookings: Booking[] = [
   { client: 'Priya Shah', service: 'Hair Styling', time: 'Tomorrow, 10:30 AM', status: 'Confirmed' },
   { client: 'Emma Wilson', service: 'Nails', time: 'Friday, 2:00 PM', status: 'Pending' },
@@ -393,6 +416,24 @@ function formatCurrency(amount: number, currencyCode = 'INR') {
   }).format(amount);
 }
 
+function mapHomePageImage(row: HomePageImageRow): HomePageImage {
+  return {
+    id: row.id,
+    title: row.title,
+    url: row.image_url,
+    storagePath: row.storage_path,
+    displayOrder: row.display_order,
+  };
+}
+
+function sanitizeStorageFileName(fileName: string) {
+  return fileName
+    .toLowerCase()
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function Header({ onBookClick, onLoginClick }: { onBookClick: () => void; onLoginClick: () => void }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -460,33 +501,33 @@ function Header({ onBookClick, onLoginClick }: { onBookClick: () => void; onLogi
   );
 }
 
-function Hero({ heroImage, onBookClick }: { heroImage: string; onBookClick: () => void }) {
-  const carouselImages = [
-    heroImage,
-    '/homepage/salon_1.jpg',
-    '/homepage/salon_2.jpg',
-    '/homepage/salon_3.jpg',
-  ];
+function Hero({ images, onBookClick }: { images: HomePageImage[]; onBookClick: () => void }) {
   const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setActiveImage((currentImage) => (currentImage + 1) % carouselImages.length);
+      setActiveImage((currentImage) => (currentImage + 1) % images.length);
     }, 4500);
 
     return () => window.clearInterval(timer);
-  }, [carouselImages.length]);
+  }, [images.length]);
+
+  useEffect(() => {
+    if (activeImage >= images.length) {
+      setActiveImage(0);
+    }
+  }, [activeImage, images.length]);
 
   return (
     <section className="hero" id="home">
       <div className="hero-carousel" aria-label="Salon image carousel">
-        {carouselImages.map((image, index) => (
+        {images.map((image, index) => (
           <div
             className={activeImage === index ? 'hero-slide active' : 'hero-slide'}
-            key={image}
+            key={image.id}
             role="img"
-            aria-label="A calm salon appointment in progress"
-            style={{ backgroundImage: `linear-gradient(rgba(35, 51, 45, 0.4), rgba(35, 51, 45, 0.48)), url("${image}")` }}
+            aria-label={image.title}
+            style={{ backgroundImage: `linear-gradient(rgba(35, 51, 45, 0.4), rgba(35, 51, 45, 0.48)), url("${image.url}")` }}
           />
         ))}
       </div>
@@ -502,11 +543,11 @@ function Hero({ heroImage, onBookClick }: { heroImage: string; onBookClick: () =
           <a className="secondary-link" href="#services">Services</a>
         </div>
         <div className="hero-dots" aria-label="Carousel slide controls">
-          {carouselImages.map((image, index) => (
+          {images.map((image, index) => (
             <button
               aria-label={`Show slide ${index + 1}`}
               className={activeImage === index ? 'active' : ''}
-              key={`${image}-dot`}
+              key={`${image.id}-dot`}
               type="button"
               onClick={() => setActiveImage(index)}
             />
@@ -866,11 +907,132 @@ export function App() {
   const [vouchers, setVouchers] = useState(initialVouchers);
   const [staffMembers, setStaffMembers] = useState(initialStaff);
   const [clientPhotos, setClientPhotos] = useState(initialClientPhotos);
+  const [homePageImages, setHomePageImages] = useState(initialHomePageImages);
   const [settings, setSettings] = useState(initialSettings);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view, selectedAlbum.title]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadHomePageImages() {
+      if (!isSupabaseConfigured || !supabase) return;
+
+      const { data, error } = await supabase
+        .from('homepage_images')
+        .select('id,title,image_url,storage_path,display_order')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      if (!error && data?.length && isMounted) {
+        setHomePageImages(data.map((row) => mapHomePageImage(row as HomePageImageRow)));
+      }
+    }
+
+    void loadHomePageImages();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  async function handleHomePageImageUpload(files: File[]) {
+    if (!files.length) return;
+
+    if (!isSupabaseConfigured || !supabase) {
+      const nextImages = files.map((file, index) => ({
+        id: `${file.name}-${crypto.randomUUID()}`,
+        title: file.name.replace(/\.[^.]+$/, ''),
+        url: URL.createObjectURL(file),
+        displayOrder: homePageImages.length + index,
+      }));
+      setHomePageImages((currentImages) => [...currentImages, ...nextImages]);
+      return;
+    }
+
+    const uploadedImages: HomePageImage[] = [];
+
+    for (const file of files) {
+      const storagePath = `homepage/${Date.now()}-${crypto.randomUUID()}-${sanitizeStorageFileName(file.name) || 'image'}`;
+      const { error: uploadError } = await supabase.storage
+        .from('site-assets')
+        .upload(storagePath, file, {
+          cacheControl: '3600',
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      const { data: publicUrlData } = supabase.storage.from('site-assets').getPublicUrl(storagePath);
+      const displayOrder = homePageImages.length + uploadedImages.length;
+      const { data, error } = await supabase
+        .from('homepage_images')
+        .insert({
+          title: file.name.replace(/\.[^.]+$/, ''),
+          image_url: publicUrlData.publicUrl,
+          storage_path: storagePath,
+          display_order: displayOrder,
+          is_active: true,
+        })
+        .select('id,title,image_url,storage_path,display_order')
+        .single();
+
+      if (error || !data) {
+        await supabase.storage.from('site-assets').remove([storagePath]);
+        throw new Error(error?.message ?? 'Image record could not be saved.');
+      }
+
+      uploadedImages.push(mapHomePageImage(data as HomePageImageRow));
+    }
+
+    setHomePageImages((currentImages) => [...currentImages, ...uploadedImages]);
+  }
+
+  async function handleHomePageImageDelete(image: HomePageImage) {
+    if (homePageImages.length === 1) return;
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from('homepage_images').delete().eq('id', image.id);
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (image.storagePath) {
+        await supabase.storage.from('site-assets').remove([image.storagePath]);
+      }
+    }
+
+    const nextImages = homePageImages
+      .filter((item) => item.id !== image.id)
+      .map((item, index) => ({ ...item, displayOrder: index }));
+
+    setHomePageImages(nextImages);
+    await handleHomePageImagesReorder(nextImages);
+  }
+
+  async function handleHomePageImagesReorder(images: HomePageImage[]) {
+    const reorderedImages = images.map((image, index) => ({ ...image, displayOrder: index }));
+    setHomePageImages(reorderedImages);
+
+    if (!isSupabaseConfigured || !supabase) return;
+
+    const updates = reorderedImages.map((image) =>
+      supabase
+        .from('homepage_images')
+        .update({ display_order: image.displayOrder })
+        .eq('id', image.id),
+    );
+    const results = await Promise.all(updates);
+    const failedUpdate = results.find((result) => result.error);
+    if (failedUpdate?.error) {
+      throw new Error(failedUpdate.error.message);
+    }
+  }
 
   async function handleLogin(email: string, password: string) {
     if (isSupabaseConfigured && supabase) {
@@ -915,6 +1077,7 @@ export function App() {
       <AdminDashboard
         bookings={bookings}
         galleryImages={galleryImages}
+        homePageImages={homePageImages}
         leads={leads}
         reviews={reviews}
         services={services}
@@ -923,6 +1086,9 @@ export function App() {
         vouchers={vouchers}
         onBookingChange={setBookings}
         onGalleryChange={setGalleryImages}
+        onHomePageImageDelete={handleHomePageImageDelete}
+        onHomePageImagesReorder={handleHomePageImagesReorder}
+        onHomePageImagesUpload={handleHomePageImageUpload}
         onLeadChange={setLeads}
         onLogout={() => setView('public')}
         onReviewChange={setReviews}
@@ -966,7 +1132,7 @@ export function App() {
     <>
       <Header onBookClick={() => setView('booking')} onLoginClick={() => setIsLoginOpen(true)} />
       <main>
-        <Hero heroImage={settings.heroImage} onBookClick={() => setView('booking')} />
+        <Hero images={homePageImages} onBookClick={() => setView('booking')} />
         <ServicesPreview services={services} />
         <FounderStory />
         <GalleryPreview
@@ -1175,6 +1341,7 @@ function ClientDashboard({
 function AdminDashboard({
   bookings,
   galleryImages,
+  homePageImages,
   leads,
   reviews,
   services,
@@ -1183,6 +1350,9 @@ function AdminDashboard({
   vouchers,
   onBookingChange,
   onGalleryChange,
+  onHomePageImageDelete,
+  onHomePageImagesReorder,
+  onHomePageImagesUpload,
   onLeadChange,
   onLogout,
   onReviewChange,
@@ -1193,6 +1363,7 @@ function AdminDashboard({
 }: {
   bookings: Booking[];
   galleryImages: GalleryImage[];
+  homePageImages: HomePageImage[];
   leads: Lead[];
   reviews: Review[];
   services: Service[];
@@ -1201,6 +1372,9 @@ function AdminDashboard({
   vouchers: Voucher[];
   onBookingChange: (bookings: Booking[]) => void;
   onGalleryChange: (galleryImages: GalleryImage[]) => void;
+  onHomePageImageDelete: (image: HomePageImage) => void | Promise<void>;
+  onHomePageImagesReorder: (images: HomePageImage[]) => void | Promise<void>;
+  onHomePageImagesUpload: (files: File[]) => void | Promise<void>;
   onLeadChange: (leads: Lead[]) => void;
   onLogout: () => void;
   onReviewChange: (reviews: Review[]) => void;
@@ -1210,7 +1384,54 @@ function AdminDashboard({
   onVoucherChange: (vouchers: Voucher[]) => void;
 }) {
   const [activeSection, setActiveSection] = useState<AdminSection>('home-page');
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+  const [homeImageStatus, setHomeImageStatus] = useState('');
   const activeLabel = adminMenuItems.find((item) => item.id === activeSection)?.label ?? 'Admin';
+
+  async function handleHomeImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) return;
+
+    try {
+      setHomeImageStatus('Uploading images...');
+      await onHomePageImagesUpload(files);
+      setHomeImageStatus('Images uploaded.');
+    } catch (error) {
+      setHomeImageStatus(error instanceof Error ? error.message : 'Images could not be uploaded.');
+    } finally {
+      input.value = '';
+    }
+  }
+
+  function handleHomeImageDrop(event: DragEvent<HTMLDivElement>, targetId: string) {
+    event.preventDefault();
+    if (!draggedImageId || draggedImageId === targetId) return;
+
+    const draggedIndex = homePageImages.findIndex((image) => image.id === draggedImageId);
+    const targetIndex = homePageImages.findIndex((image) => image.id === targetId);
+    if (draggedIndex < 0 || targetIndex < 0) return;
+
+    const reorderedImages = [...homePageImages];
+    const [draggedImage] = reorderedImages.splice(draggedIndex, 1);
+    reorderedImages.splice(targetIndex, 0, draggedImage);
+    setDraggedImageId(null);
+    setHomeImageStatus('Saving image order...');
+    void Promise.resolve(onHomePageImagesReorder(reorderedImages))
+      .then(() => setHomeImageStatus('Image order saved.'))
+      .catch((error) => {
+        setHomeImageStatus(error instanceof Error ? error.message : 'Image order could not be saved.');
+      });
+  }
+
+  function handleHomeImageDelete(image: HomePageImage) {
+    setHomeImageStatus('Deleting image...');
+    void Promise.resolve(onHomePageImageDelete(image))
+      .then(() => setHomeImageStatus('Image deleted.'))
+      .catch((error) => {
+        setHomeImageStatus(error instanceof Error ? error.message : 'Image could not be deleted.');
+      });
+  }
 
   return (
     <div className="admin-page">
@@ -1253,14 +1474,48 @@ function AdminDashboard({
 
         {activeSection === 'home-page' ? (
           <div className="admin-grid single">
-            <AdminPanel icon={<Home size={20} />} title="Home page">
-              <AdminField label="Hero image URL">
-                <input
-                  value={settings.heroImage}
-                  onChange={(event) => onSettingsChange({ ...settings, heroImage: event.target.value })}
-                />
-              </AdminField>
-              <img className="admin-image-preview" src={settings.heroImage} alt="Current home page preview" />
+            <AdminPanel icon={<Home size={20} />} title="Home page carousel">
+              <div className="client-upload-panel">
+                <div>
+                  <strong>Manage homepage images</strong>
+                  <p>Upload images from your computer, drag them to change the carousel order, or delete old images.</p>
+                </div>
+                <label className="small-admin-button">
+                  <Camera size={16} />
+                  Upload Images
+                  <input accept="image/*" multiple type="file" onChange={handleHomeImageUpload} />
+                </label>
+              </div>
+
+              <div className="home-image-manager">
+                {homePageImages.map((image, index) => (
+                  <div
+                    className="home-image-row"
+                    draggable
+                    key={image.id}
+                    onDragStart={() => setDraggedImageId(image.id)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => handleHomeImageDrop(event, image.id)}
+                  >
+                    <span className="drag-handle">::</span>
+                    <img src={image.url} alt={image.title} />
+                    <div>
+                      <strong>{image.title}</strong>
+                      <small>Slide {index + 1}</small>
+                    </div>
+                    <button
+                      className="danger-admin-button"
+                      disabled={homePageImages.length === 1}
+                      type="button"
+                      onClick={() => handleHomeImageDelete(image)}
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {homeImageStatus ? <p className="admin-status-text">{homeImageStatus}</p> : null}
             </AdminPanel>
           </div>
         ) : null}
@@ -1415,7 +1670,7 @@ function AdminDashboard({
             <button
               className="small-admin-button"
               type="button"
-              onClick={() => onServiceChange([...services, { title: 'New Service', description: 'Service description', price: 'From ₹0', image: settings.heroImage }])}
+              onClick={() => onServiceChange([...services, { title: 'New Service', description: 'Service description', price: 'From ₹0', image: homePageImages[0]?.url ?? settings.heroImage }])}
             >
               <Plus size={16} />
               Add Service
