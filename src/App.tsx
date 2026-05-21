@@ -103,6 +103,8 @@ type SiteSettings = {
   phone: string;
   email: string;
   address: string;
+  currencyCode: string;
+  gstPercent: number;
 };
 
 type AdminSection =
@@ -124,19 +126,19 @@ const initialServices: Service[] = [
   {
     title: 'Hair Styling',
     description: 'Cuts, blow waves, colour refreshes, and soft styling for everyday confidence.',
-    price: 'From $45',
+    price: 'From ₹1,500',
     image: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=900&q=80',
   },
   {
     title: 'Beauty Treatments',
     description: 'Brows, lashes, facials, and skin-focused appointments in a relaxed setting.',
-    price: 'From $35',
+    price: 'From ₹1,200',
     image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=900&q=80',
   },
   {
     title: 'Nails',
     description: 'Clean manicures, gel polish, and detail-led nail care for polished hands.',
-    price: 'From $30',
+    price: 'From ₹900',
     image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=900&q=80',
   },
 ];
@@ -145,31 +147,31 @@ const bookingServices = [
   {
     title: 'Hair Styling',
     duration: '60 min',
-    price: 65,
+    price: 1500,
     image: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?auto=format&fit=crop&w=240&q=80',
   },
   {
     title: 'Hair Coloring',
     duration: '90 min',
-    price: 120,
+    price: 2800,
     image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?auto=format&fit=crop&w=240&q=80',
   },
   {
     title: 'Balayage',
     duration: '120 min',
-    price: 150,
+    price: 4500,
     image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=240&q=80',
   },
   {
     title: 'Makeup',
     duration: '75 min',
-    price: 85,
+    price: 2500,
     image: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=240&q=80',
   },
   {
     title: 'Nails',
     duration: '45 min',
-    price: 55,
+    price: 1200,
     image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=240&q=80',
   },
 ];
@@ -343,7 +345,7 @@ const initialReviews: Review[] = [
 
 const initialVouchers: Voucher[] = [
   { code: 'WELCOME10', description: 'Introductory discount for new clients', value: '10%', status: 'Active' },
-  { code: 'GIFT50', description: 'Gift voucher credit', value: '$50', status: 'Draft' },
+  { code: 'GIFT500', description: 'Gift voucher credit', value: '₹500', status: 'Draft' },
 ];
 
 const initialStaff: StaffMember[] = [
@@ -379,7 +381,17 @@ const initialSettings: SiteSettings = {
   phone: '04XX XXX XXX',
   email: 'hello@kbeautysalon.com',
   address: 'Your salon address will go here once confirmed.',
+  currencyCode: 'INR',
+  gstPercent: 18,
 };
+
+function formatCurrency(amount: number, currencyCode = 'INR') {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: currencyCode,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
 
 function Header({ onBookClick, onLoginClick }: { onBookClick: () => void; onLoginClick: () => void }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -683,11 +695,13 @@ function ContactBand({ settings }: { settings: SiteSettings }) {
   );
 }
 
-function BookingPage({ onBack }: { onBack: () => void }) {
+function BookingPage({ onBack, settings }: { onBack: () => void; settings: SiteSettings }) {
   const [selectedServiceIndex, setSelectedServiceIndex] = useState(0);
   const [selectedDate, setSelectedDate] = useState(20);
   const [selectedTime, setSelectedTime] = useState('10:00 AM');
   const selectedService = bookingServices[selectedServiceIndex];
+  const gstAmount = Math.round((selectedService.price * settings.gstPercent) / 100);
+  const totalAmount = selectedService.price + gstAmount;
   const calendarDays = [
     { day: 26, muted: true },
     { day: 27, muted: true },
@@ -735,7 +749,7 @@ function BookingPage({ onBack }: { onBack: () => void }) {
                   <strong>{service.title}</strong>
                   <small>{service.duration}</small>
                 </span>
-                <b>${service.price}</b>
+                <b>{formatCurrency(service.price, settings.currencyCode)}</b>
                 {selectedServiceIndex === index ? <CheckCircle2 size={22} /> : null}
               </button>
             ))}
@@ -801,12 +815,14 @@ function BookingPage({ onBack }: { onBack: () => void }) {
                 <strong>{selectedService.title}</strong>
                 <small>{selectedService.duration}</small>
               </span>
-              <b>${selectedService.price}</b>
+              <b>{formatCurrency(selectedService.price, settings.currencyCode)}</b>
             </div>
             <dl>
               <div><dt>Date</dt><dd>May {selectedDate}, 2026</dd></div>
               <div><dt>Time</dt><dd>{selectedTime}</dd></div>
-              <div><dt>Total</dt><dd>${selectedService.price}.00</dd></div>
+              <div><dt>Subtotal</dt><dd>{formatCurrency(selectedService.price, settings.currencyCode)}</dd></div>
+              <div><dt>GST ({settings.gstPercent}%)</dt><dd>{formatCurrency(gstAmount, settings.currencyCode)}</dd></div>
+              <div><dt>Total</dt><dd>{formatCurrency(totalAmount, settings.currencyCode)}</dd></div>
             </dl>
             <button className="confirm-booking-button" type="button">
               Confirm Booking
@@ -943,7 +959,7 @@ export function App() {
   }
 
   if (view === 'booking') {
-    return <BookingPage onBack={() => setView('public')} />;
+    return <BookingPage settings={settings} onBack={() => setView('public')} />;
   }
 
   return (
@@ -1376,6 +1392,21 @@ function AdminDashboard({
                 onChange={(event) => onSettingsChange({ ...settings, instagramUrl: event.target.value })}
               />
             </AdminField>
+            <AdminField label="Currency code">
+              <input
+                value={settings.currencyCode}
+                onChange={(event) => onSettingsChange({ ...settings, currencyCode: event.target.value.toUpperCase() })}
+              />
+            </AdminField>
+            <AdminField label="GST percentage">
+              <input
+                min="0"
+                step="0.01"
+                type="number"
+                value={settings.gstPercent}
+                onChange={(event) => onSettingsChange({ ...settings, gstPercent: Number(event.target.value) })}
+              />
+            </AdminField>
           </AdminPanel>
         ) : null}
 
@@ -1384,7 +1415,7 @@ function AdminDashboard({
             <button
               className="small-admin-button"
               type="button"
-              onClick={() => onServiceChange([...services, { title: 'New Service', description: 'Service description', price: 'From $0', image: settings.heroImage }])}
+              onClick={() => onServiceChange([...services, { title: 'New Service', description: 'Service description', price: 'From ₹0', image: settings.heroImage }])}
             >
               <Plus size={16} />
               Add Service

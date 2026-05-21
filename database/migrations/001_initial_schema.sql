@@ -156,6 +156,8 @@ create table if not exists public.salon_settings (
   phone text,
   email text,
   address text,
+  currency_code text not null default 'INR',
+  gst_percent numeric(5,2) not null default 18.00,
   updated_at timestamptz not null default now()
 );
 
@@ -324,6 +326,6 @@ on public.client_reviews for all
 using (public.is_admin_or_staff())
 with check (public.is_admin_or_staff());
 
-insert into public.salon_settings (salon_name, instagram_url, phone, email, address)
-select 'K Beauty Salon', 'https://www.instagram.com/kbeautyglamsalon/', '04XX XXX XXX', 'hello@kbeautysalon.com', 'Your salon address will go here once confirmed.'
+insert into public.salon_settings (salon_name, instagram_url, phone, email, address, currency_code, gst_percent)
+select 'K Beauty Salon', 'https://www.instagram.com/kbeautyglamsalon/', '04XX XXX XXX', 'hello@kbeautysalon.com', 'Your salon address will go here once confirmed.', 'INR', 18.00
 where not exists (select 1 from public.salon_settings);

@@ -196,6 +196,8 @@ Editable website settings.
 - `phone text`
 - `email text`
 - `address text`
+- `currency_code text` default `INR`
+- `gst_percent numeric(5,2)` default `18.00`
 - `updated_at timestamptz`
 
 ### client_reviews
@@ -372,6 +374,8 @@ create table public.salon_settings (
   phone text,
   email text,
   address text,
+  currency_code text not null default 'INR',
+  gst_percent numeric(5,2) not null default 18.00,
   updated_at timestamptz not null default now()
 );
 
