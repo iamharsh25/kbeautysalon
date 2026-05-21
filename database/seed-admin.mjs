@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { existsSync, readFileSync } from 'node:fs';
+import ws from 'ws';
 
 if (existsSync('.env')) {
   const envFile = readFileSync('.env', 'utf8');
@@ -34,6 +35,9 @@ const supabase = createClient(
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+    },
+    realtime: {
+      transport: ws,
     },
   },
 );
