@@ -1396,7 +1396,6 @@ textarea {
   justify-content: flex-end;
 }
 
-.admin-icon-action,
 .admin-user-button {
   align-items: center;
   background: var(--white);
@@ -1409,28 +1408,8 @@ textarea {
   min-height: 52px;
 }
 
-.admin-icon-action {
-  justify-content: center;
-  position: relative;
-  width: 52px;
-}
-
-.admin-icon-action span {
-  align-items: center;
-  background: #ff3b30;
-  border-radius: 999px;
-  color: var(--white);
-  display: inline-flex;
-  font-size: 0.68rem;
-  height: 18px;
-  justify-content: center;
-  position: absolute;
-  right: 7px;
-  top: 4px;
-  width: 18px;
-}
-
 .admin-user-button {
+  cursor: pointer;
   gap: 10px;
   padding: 0 16px 0 8px;
 }
@@ -1440,6 +1419,44 @@ textarea {
   height: 36px;
   object-fit: cover;
   width: 36px;
+}
+
+.admin-user-menu {
+  position: relative;
+}
+
+.admin-user-dropdown {
+  background: var(--white);
+  border: 1px solid rgba(63, 109, 95, 0.12);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  min-width: 180px;
+  padding: 8px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 10;
+}
+
+.admin-user-dropdown button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #9d4238;
+  cursor: pointer;
+  display: flex;
+  font-weight: 800;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.admin-user-dropdown button:hover,
+.admin-user-dropdown button:focus-visible {
+  background: rgba(157, 66, 56, 0.08);
 }
 
 .outline-admin-button {

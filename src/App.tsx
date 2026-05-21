@@ -45,6 +45,7 @@ export function App() {
   const [clientPhotos, setClientPhotos] = useState(initialClientPhotos);
   const [homePageImages, setHomePageImages] = useState(initialHomePageImages);
   const [settings, setSettings] = useState(initialSettings);
+  const [currentUserFullName, setCurrentUserFullName] = useState('K Beauty Admin');
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -53,21 +54,34 @@ export function App() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadHomePageImages() {
+    async function loadInitialSupabaseData() {
       if (!isSupabaseConfigured || !supabase) return;
 
-      const { data, error } = await supabase
+      const { data: homepageImages, error: homepageError } = await supabase
         .from('homepage_images')
         .select('id,title,image_url,storage_path,display_order')
         .eq('is_active', true)
         .order('display_order', { ascending: true });
 
-      if (!error && data?.length && isMounted) {
-        setHomePageImages(data.map((row) => mapHomePageImage(row as HomePageImageRow)));
+      if (!homepageError && homepageImages?.length && isMounted) {
+        setHomePageImages(homepageImages.map((row) => mapHomePageImage(row as HomePageImageRow)));
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user || !isMounted) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', userData.user.id)
+        .single();
+
+      if (profile?.full_name && isMounted) {
+        setCurrentUserFullName(profile.full_name);
       }
     }
 
-    void loadHomePageImages();
+    void loadInitialSupabaseData();
 
     return () => {
       isMounted = false;
@@ -181,7 +195,7 @@ export function App() {
 
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role,full_name')
         .eq('id', data.user.id)
         .single();
 
@@ -190,6 +204,7 @@ export function App() {
         return;
       }
 
+      setCurrentUserFullName(profile.full_name || data.user.email || 'K Beauty Admin');
       navigate(profile.role === 'admin' || profile.role === 'staff' ? '/admin' : '/client');
       setIsLoginOpen(false);
       setLoginError('');
@@ -197,6 +212,7 @@ export function App() {
     }
 
     if (email.toLowerCase() === 'admin@kbeautysalon.com' && password === 'preview123') {
+      setCurrentUserFullName('K Beauty Admin');
       navigate('/admin');
       setIsLoginOpen(false);
       setLoginError('');
@@ -256,6 +272,7 @@ export function App() {
           path="/admin"
           element={
             <AdminDashboard
+              adminFullName={currentUserFullName}
               bookings={bookings}
               galleryImages={galleryImages}
               homePageImages={homePageImages}

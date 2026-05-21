@@ -1,11 +1,12 @@
 import { useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
-import { Bell, CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, Mail, MessageSquare, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck } from 'lucide-react';
+import { CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, MessageSquare, Palette, Plus, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
 import type { AdminSection, Booking, GalleryImage, HomePageImage, Lead, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
 import { updateListItem } from '../utils/list';
 
 export function AdminDashboard({
+  adminFullName,
   bookings,
   galleryImages,
   homePageImages,
@@ -28,6 +29,7 @@ export function AdminDashboard({
   onSettingsChange,
   onVoucherChange,
 }: {
+  adminFullName: string;
   bookings: Booking[];
   galleryImages: GalleryImage[];
   homePageImages: HomePageImage[];
@@ -53,6 +55,7 @@ export function AdminDashboard({
   const [activeSection, setActiveSection] = useState<AdminSection>('home-page');
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [homeImageStatus, setHomeImageStatus] = useState('');
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
 
   async function uploadHomeImages(files: File[]) {
     if (!files.length) return;
@@ -161,18 +164,26 @@ export function AdminDashboard({
             <span>Here's what's happening with your salon website.</span>
           </div>
           <div className="admin-topbar-actions">
-            <button className="admin-icon-action" type="button" aria-label="Notifications">
-              <Bell size={18} />
-              <span>3</span>
-            </button>
-            <button className="admin-user-button" type="button">
-              <img src={settings.logoUrl} alt="" />
-              Admin User
-              <ChevronDown size={18} />
-            </button>
-            <button className="outline-admin-button" type="button" onClick={onLogout}>
-              Log out
-            </button>
+            <div className="admin-user-menu">
+              <button
+                className="admin-user-button"
+                type="button"
+                aria-expanded={isAdminMenuOpen}
+                onClick={() => setIsAdminMenuOpen((isOpen) => !isOpen)}
+              >
+                <img src={settings.logoUrl} alt="" />
+                {adminFullName}
+                <ChevronDown size={18} />
+              </button>
+              {isAdminMenuOpen ? (
+                <div className="admin-user-dropdown">
+                  <button type="button" onClick={onLogout}>
+                    <LogOut size={16} />
+                    Log out
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
