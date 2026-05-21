@@ -1188,6 +1188,7 @@ textarea {
 }
 
 .login-modal,
+.admin-modal,
 .admin-panel,
 .admin-stat {
   background: var(--white);
@@ -1204,6 +1205,91 @@ textarea {
   padding: clamp(24px, 5vw, 42px);
   position: relative;
   width: min(100%, 460px);
+}
+
+.admin-modal-backdrop {
+  align-items: flex-start;
+  overflow-y: auto;
+}
+
+.admin-modal {
+  color: var(--ink);
+  display: grid;
+  gap: 18px;
+  margin-block: auto;
+  max-height: calc(100svh - 40px);
+  overflow-y: auto;
+  padding: clamp(24px, 4vw, 36px);
+  position: relative;
+  width: min(100%, 860px);
+}
+
+.confirm-modal {
+  max-width: 520px;
+}
+
+.admin-modal p {
+  color: var(--gold);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.admin-modal h2 {
+  color: var(--green-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: 1;
+  margin: 0;
+}
+
+.admin-modal h3 {
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.admin-modal > span,
+.admin-modal > strong {
+  line-height: 1.6;
+}
+
+.admin-modal > span {
+  color: var(--muted);
+}
+
+.admin-modal > strong {
+  color: #9d4238;
+}
+
+.admin-modal-section {
+  border-top: 1px solid rgba(63, 109, 95, 0.12);
+  display: grid;
+  gap: 14px;
+  padding-top: 18px;
+}
+
+.admin-modal-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-modal-grid .admin-field:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.admin-modal-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
 .modal-close {
@@ -1777,6 +1863,11 @@ textarea {
   width: 100%;
 }
 
+.customer-list-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .customer-create-form {
   align-items: end;
   display: grid;
@@ -2242,6 +2333,7 @@ textarea {
   .admin-grid.single,
   .home-settings-grid,
   .website-details-grid,
+  .admin-modal-grid,
   .customer-create-form,
   .customer-edit-card,
   .customer-edit-grid,

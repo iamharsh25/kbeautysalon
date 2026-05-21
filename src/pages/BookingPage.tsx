@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Scissors, Sparkles, UserCheck } from 'lucide-react';
 import { bookingServices, bookingTimes } from '../data/initialData';
 import type { SiteSettings } from '../types';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatDisplayDate } from '../utils/format';
 
 export function BookingPage({ onBack, settings }: { onBack: () => void; settings: SiteSettings }) {
   const [selectedServiceIndex, setSelectedServiceIndex] = useState(0);
@@ -11,6 +11,8 @@ export function BookingPage({ onBack, settings }: { onBack: () => void; settings
   const selectedService = bookingServices[selectedServiceIndex];
   const gstAmount = Math.round((selectedService.price * settings.gstPercent) / 100);
   const totalAmount = selectedService.price + gstAmount;
+  const selectedDateValue = `2026-05-${String(selectedDate).padStart(2, '0')}`;
+  const selectedDisplayDate = formatDisplayDate(selectedDateValue);
   const calendarDays = [
     { day: 26, muted: true },
     { day: 27, muted: true },
@@ -92,7 +94,7 @@ export function BookingPage({ onBack, settings }: { onBack: () => void; settings
           <div className="selected-date-card">
             <Sparkles size={22} />
             <span>
-              <strong>May {selectedDate}, 2026</strong>
+              <strong>{selectedDisplayDate}</strong>
               <small>Wednesday</small>
             </span>
           </div>
@@ -102,7 +104,7 @@ export function BookingPage({ onBack, settings }: { onBack: () => void; settings
           <BookingColumnTitle icon={<Clock size={22} />} title="Select Time" text="Choose an available time slot" />
           <div className="booking-time-heading">
             <span>Available times for</span>
-            <strong>May {selectedDate}, 2026</strong>
+            <strong>{selectedDisplayDate}</strong>
           </div>
           <div className="booking-time-grid">
             {bookingTimes.map((time) => (
@@ -127,7 +129,7 @@ export function BookingPage({ onBack, settings }: { onBack: () => void; settings
               <b>{formatCurrency(selectedService.price, settings.currencyCode)}</b>
             </div>
             <dl>
-              <div><dt>Date</dt><dd>May {selectedDate}, 2026</dd></div>
+              <div><dt>Date</dt><dd>{selectedDisplayDate}</dd></div>
               <div><dt>Time</dt><dd>{selectedTime}</dd></div>
               <div><dt>Subtotal</dt><dd>{formatCurrency(selectedService.price, settings.currencyCode)}</dd></div>
               <div><dt>GST ({settings.gstPercent}%)</dt><dd>{formatCurrency(gstAmount, settings.currencyCode)}</dd></div>

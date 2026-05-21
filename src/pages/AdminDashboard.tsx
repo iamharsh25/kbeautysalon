@@ -2,10 +2,17 @@ import { useEffect, useState, type ChangeEvent, type DragEvent, type FormEvent, 
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CalendarDays, ChevronDown, ExternalLink, Gift, Globe2, Home, Image, ImagePlus, LogOut, Mail, Palette, Plus, Save, Search, Settings, Sparkles, Star, Trash2, UploadCloud, UserCheck, UsersRound, X } from 'lucide-react';
 import { galleryAlbums } from '../data/initialData';
-import type { AdminSection, Booking, Customer, GalleryImage, HomePageImage, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
+import type { AdminSection, Booking, Customer, CustomerVoucher, GalleryImage, HomePageImage, Review, Service, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
 import { updateListItem } from '../utils/list';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatDisplayDate } from '../utils/format';
+
+type ConfirmDialogState = {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+};
 
 export function AdminDashboard({
   adminFullName,
@@ -62,6 +69,8 @@ export function AdminDashboard({
   const [customerSearch, setCustomerSearch] = useState('');
   const [isEditingCustomer, setIsEditingCustomer] = useState(false);
   const [customerDraft, setCustomerDraft] = useState<Customer | null>(null);
+  const [isCustomerCreateOpen, setIsCustomerCreateOpen] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const [voucherToAssign, setVoucherToAssign] = useState(vouchers.find((voucher) => voucher.status === 'Active')?.code ?? vouchers[0]?.code ?? '');
   const [voucherStartDate, setVoucherStartDate] = useState('2026-05-21');
   const [voucherExpiryDate, setVoucherExpiryDate] = useState('2026-08-21');
@@ -162,6 +171,20 @@ export function AdminDashboard({
     setIsEditingCustomer(false);
   }
 
+  function requestConfirmation(dialog: ConfirmDialogState) {
+    setConfirmDialog(dialog);
+  }
+
+  function closeConfirmation() {
+    setConfirmDialog(null);
+  }
+
+  function confirmAction() {
+    const action = confirmDialog?.onConfirm;
+    setConfirmDialog(null);
+    action?.();
+  }
+
   async function uploadHomeImages(files: File[]) {
     if (!files.length) return;
 
@@ -223,13 +246,19 @@ export function AdminDashboard({
   }
 
   function handleHomeImageDelete(image: HomePageImage) {
-    if (!window.confirm(`Delete "${image.title}" from the home page carousel? This cannot be undone.`)) return;
-    setHomeImageStatus('Deleting image...');
-    void Promise.resolve(onHomePageImageDelete(image))
-      .then(() => setHomeImageStatus('Image deleted.'))
-      .catch((error) => {
-        setHomeImageStatus(error instanceof Error ? error.message : 'Image could not be deleted.');
-      });
+    requestConfirmation({
+      title: 'Delete home page image?',
+      message: `This will remove "${image.title}" from the home page carousel.`,
+      confirmLabel: 'Delete Image',
+      onConfirm: () => {
+        setHomeImageStatus('Deleting image...');
+        void Promise.resolve(onHomePageImageDelete(image))
+          .then(() => setHomeImageStatus('Image deleted.'))
+          .catch((error) => {
+            setHomeImageStatus(error instanceof Error ? error.message : 'Image could not be deleted.');
+          });
+      },
+    });
   }
 
   function handleCreateCustomer(event: FormEvent<HTMLFormElement>) {
@@ -238,7 +267,18 @@ export function AdminDashboard({
     const fullName = String(formData.get('fullName') ?? '').trim();
     const email = String(formData.get('email') ?? '').trim();
     const mobile = String(formData.get('mobile') ?? '').trim();
+    const voucherCode = String(formData.get('voucherCode') ?? '').trim();
+    const voucher = vouchers.find((item) => item.code === voucherCode);
     if (!fullName || (!email && !mobile)) return;
+
+    const assignedVoucher: CustomerVoucher[] = voucher ? [{
+      voucherCode: voucher.code,
+      startDate: String(formData.get('voucherStartDate') ?? '').trim(),
+      expiryDate: String(formData.get('voucherExpiryDate') ?? '').trim(),
+      status: 'Voucher Not Used',
+      discountType: voucher.discountType ?? (voucher.value.includes('%') ? 'Percentage Off' : 'Amount Off'),
+      discountValue: voucher.discountValue ?? voucher.value,
+    }] : [];
 
     const nextCustomer: Customer = {
       id: `customer-${crypto.randomUUID()}`,
@@ -247,19 +287,20 @@ export function AdminDashboard({
       email,
       mobile,
       address: String(formData.get('address') ?? '').trim(),
-      notes: 'New customer profile created by admin.',
+      notes: String(formData.get('notes') ?? '').trim(),
       membership: {
-        isMember: false,
-        startDate: '',
-        endDate: '',
-        fee: 0,
-        paidDate: '',
+        isMember: String(formData.get('isMember') ?? 'no') === 'yes',
+        startDate: String(formData.get('membershipStartDate') ?? '').trim(),
+        endDate: String(formData.get('membershipEndDate') ?? '').trim(),
+        fee: Number(formData.get('membershipFee') ?? 0),
+        paidDate: String(formData.get('membershipPaidDate') ?? '').trim(),
       },
       serviceHistory: [],
-      vouchers: [],
+      vouchers: assignedVoucher,
     };
 
     onCustomersChange([nextCustomer, ...customers]);
+    setIsCustomerCreateOpen(false);
     openCustomerProfile(nextCustomer);
     event.currentTarget.reset();
   }
@@ -293,28 +334,38 @@ export function AdminDashboard({
     if (!selectedCustomer) return;
     const voucher = selectedCustomer.vouchers[voucherIndex];
     if (!voucher) return;
-    if (!window.confirm(`Remove voucher "${voucher.voucherCode}" from ${selectedCustomer.fullName}? This cannot be undone.`)) return;
 
-    const nextCustomers = customers.map((customer) => {
-      if (customer.id !== selectedCustomer.id) return customer;
-      return {
-        ...customer,
-        vouchers: customer.vouchers.filter((_, index) => index !== voucherIndex),
-      };
+    requestConfirmation({
+      title: 'Remove customer voucher?',
+      message: `This will remove voucher "${voucher.voucherCode}" from ${selectedCustomer.fullName}.`,
+      confirmLabel: 'Remove Voucher',
+      onConfirm: () => {
+        const nextCustomers = customers.map((customer) => {
+          if (customer.id !== selectedCustomer.id) return customer;
+          return {
+            ...customer,
+            vouchers: customer.vouchers.filter((_, index) => index !== voucherIndex),
+          };
+        });
+
+        onCustomersChange(nextCustomers);
+        if (customerDraft?.id === selectedCustomer.id) {
+          setCustomerDraft({
+            ...customerDraft,
+            vouchers: customerDraft.vouchers.filter((_, index) => index !== voucherIndex),
+          });
+        }
+      },
     });
-
-    onCustomersChange(nextCustomers);
-    if (customerDraft?.id === selectedCustomer.id) {
-      setCustomerDraft({
-        ...customerDraft,
-        vouchers: customerDraft.vouchers.filter((_, index) => index !== voucherIndex),
-      });
-    }
   }
 
   function handleDeleteService(index: number, service: Service) {
-    if (!window.confirm(`Delete "${service.title}" from the service menu? This cannot be undone.`)) return;
-    onServiceChange(services.filter((_, itemIndex) => itemIndex !== index));
+    requestConfirmation({
+      title: 'Delete service?',
+      message: `This will remove "${service.title}" from the service menu.`,
+      confirmLabel: 'Delete Service',
+      onConfirm: () => onServiceChange(services.filter((_, itemIndex) => itemIndex !== index)),
+    });
   }
 
   return (
@@ -658,10 +709,10 @@ export function AdminDashboard({
                       ) : (
                         <dl>
                           <div><dt>Salon Member</dt><dd>{visibleCustomer.membership.isMember ? 'Yes' : 'No'}</dd></div>
-                          <div><dt>Start Date</dt><dd>{visibleCustomer.membership.startDate || 'Not started'}</dd></div>
-                          <div><dt>End Date</dt><dd>{visibleCustomer.membership.endDate || 'Not set'}</dd></div>
+                          <div><dt>Start Date</dt><dd>{visibleCustomer.membership.startDate ? formatDisplayDate(visibleCustomer.membership.startDate) : 'Not started'}</dd></div>
+                          <div><dt>End Date</dt><dd>{visibleCustomer.membership.endDate ? formatDisplayDate(visibleCustomer.membership.endDate) : 'Not set'}</dd></div>
                           <div><dt>Membership Fee</dt><dd>{formatCurrency(visibleCustomer.membership.fee)}</dd></div>
-                          <div><dt>Paid Date</dt><dd>{visibleCustomer.membership.paidDate || 'Not paid'}</dd></div>
+                          <div><dt>Paid Date</dt><dd>{visibleCustomer.membership.paidDate ? formatDisplayDate(visibleCustomer.membership.paidDate) : 'Not paid'}</dd></div>
                         </dl>
                       )}
                     </section>
@@ -709,7 +760,7 @@ export function AdminDashboard({
                         <tbody>
                           {visibleCustomer.serviceHistory.length ? visibleCustomer.serviceHistory.map((history) => (
                             <tr key={`${history.date}-${history.serviceName}`}>
-                              <td>{history.date}</td>
+                              <td>{formatDisplayDate(history.date)}</td>
                               <td>{history.time}</td>
                               <td>{history.serviceName}</td>
                               <td>{history.staffName}</td>
@@ -745,8 +796,8 @@ export function AdminDashboard({
                           {visibleCustomer.vouchers.length ? visibleCustomer.vouchers.map((voucher, index) => (
                             <tr key={`${voucher.voucherCode}-${index}`}>
                               <td>{voucher.voucherCode}</td>
-                              <td>{voucher.startDate}</td>
-                              <td>{voucher.expiryDate}</td>
+                              <td>{formatDisplayDate(voucher.startDate)}</td>
+                              <td>{formatDisplayDate(voucher.expiryDate)}</td>
                               <td><span className={voucher.status === 'Voucher Used' ? 'status-pill used' : 'status-pill'}>{voucher.status}</span></td>
                               <td>{voucher.discountType}</td>
                               <td>{voucher.discountValue}</td>
@@ -767,24 +818,12 @@ export function AdminDashboard({
                 </div>
               ) : (
                 <>
-                  <form className="customer-create-form" onSubmit={handleCreateCustomer}>
-                    <AdminField label="Full Name">
-                      <input name="fullName" placeholder="Customer full name" />
-                    </AdminField>
-                    <AdminField label="Email">
-                      <input name="email" placeholder="customer@example.com" type="email" />
-                    </AdminField>
-                    <AdminField label="Mobile Number">
-                      <input name="mobile" placeholder="98765 43210" />
-                    </AdminField>
-                    <AdminField label="Address">
-                      <input name="address" placeholder="Customer address" />
-                    </AdminField>
-                    <button className="small-admin-button" type="submit">
+                  <div className="customer-list-actions">
+                    <button className="small-admin-button" type="button" onClick={() => setIsCustomerCreateOpen(true)}>
                       <Plus size={16} />
                       Create Customer
                     </button>
-                  </form>
+                  </div>
 
                   <div className="customer-list-toolbar">
                     <label className="customer-search-field">
@@ -1053,6 +1092,115 @@ export function AdminDashboard({
           </AdminPanel>
         ) : null}
       </section>
+
+      {isCustomerCreateOpen ? (
+        <div className="modal-backdrop admin-modal-backdrop" role="presentation">
+          <form className="admin-modal customer-create-modal" onSubmit={handleCreateCustomer} aria-label="Create customer form">
+            <button className="modal-close" type="button" onClick={() => setIsCustomerCreateOpen(false)} aria-label="Close create customer modal">
+              x
+            </button>
+            <p>Manage Customers</p>
+            <h2>Create Customer</h2>
+            <div className="admin-modal-section">
+              <h3>Customer Information</h3>
+              <div className="admin-modal-grid">
+                <AdminField label="Full Name">
+                  <input name="fullName" placeholder="Customer full name" required />
+                </AdminField>
+                <AdminField label="Email">
+                  <input name="email" placeholder="customer@example.com" type="email" />
+                </AdminField>
+                <AdminField label="Mobile Number">
+                  <input name="mobile" placeholder="98765 43210" />
+                </AdminField>
+                <AdminField label="Address">
+                  <input name="address" placeholder="Customer address" />
+                </AdminField>
+                <AdminField label="Notes">
+                  <textarea name="notes" placeholder="Preferences, allergies, appointment notes..." />
+                </AdminField>
+              </div>
+            </div>
+
+            <div className="admin-modal-section">
+              <h3>Membership Information</h3>
+              <div className="admin-modal-grid">
+                <AdminField label="Salon Member">
+                  <select name="isMember" defaultValue="no">
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </AdminField>
+                <AdminField label="Membership Start Date">
+                  <input name="membershipStartDate" type="date" />
+                </AdminField>
+                <AdminField label="Membership End Date">
+                  <input name="membershipEndDate" type="date" />
+                </AdminField>
+                <AdminField label="Membership Fee">
+                  <input min="0" name="membershipFee" placeholder="0" type="number" />
+                </AdminField>
+                <AdminField label="Membership Paid Date">
+                  <input name="membershipPaidDate" type="date" />
+                </AdminField>
+              </div>
+            </div>
+
+            <div className="admin-modal-section">
+              <h3>Voucher</h3>
+              <div className="admin-modal-grid">
+                <AdminField label="Allocate Voucher">
+                  <select name="voucherCode" defaultValue="">
+                    <option value="">No voucher now</option>
+                    {vouchers.filter((voucher) => voucher.status === 'Active').map((voucher) => (
+                      <option key={voucher.code} value={voucher.code}>{voucher.code} - {voucher.value}</option>
+                    ))}
+                  </select>
+                </AdminField>
+                <AdminField label="Voucher Start Date">
+                  <input name="voucherStartDate" type="date" defaultValue={voucherStartDate} />
+                </AdminField>
+                <AdminField label="Voucher Expiry Date">
+                  <input name="voucherExpiryDate" type="date" defaultValue={voucherExpiryDate} />
+                </AdminField>
+              </div>
+            </div>
+
+            <div className="admin-modal-actions">
+              <button className="outline-admin-button cancel-admin-button" type="button" onClick={() => setIsCustomerCreateOpen(false)}>
+                Cancel
+              </button>
+              <button className="small-admin-button" type="submit">
+                <Plus size={16} />
+                Create Customer
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      {confirmDialog ? (
+        <div className="modal-backdrop admin-modal-backdrop" role="presentation">
+          <div className="admin-modal confirm-modal" role="dialog" aria-modal="true" aria-label={confirmDialog.title}>
+            <button className="modal-close" type="button" onClick={closeConfirmation} aria-label="Close confirmation modal">
+              x
+            </button>
+            <p>Confirm Action</p>
+            <h2>{confirmDialog.title}</h2>
+            <span>{confirmDialog.message}</span>
+            <strong>This action cannot be undone.</strong>
+            <div className="admin-modal-actions">
+              <button className="outline-admin-button cancel-admin-button" type="button" onClick={closeConfirmation}>
+                Cancel
+              </button>
+              <button className="danger-admin-button" type="button" onClick={confirmAction}>
+                <Trash2 size={16} />
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
