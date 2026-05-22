@@ -15,9 +15,13 @@ export function Header({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  function getSectionHref(item: string) {
+    return `/#${item.toLowerCase().replaceAll(' ', '-')}`;
+  }
+
   return (
     <header className="site-header">
-      <a className="brand" href="#home" aria-label="K Beauty Salon home">
+      <a className="brand" href="/#home" aria-label="K Beauty Salon home">
         <img className="brand-logo" src={logoUrl} alt="" />
         <span>K Beauty Salon</span>
       </a>
@@ -27,7 +31,7 @@ export function Header({
           item === 'Services' && onServicesClick ? (
             <button key={item} type="button" onClick={onServicesClick}>{item}</button>
           ) : (
-            <a key={item} href={`#${item.toLowerCase().replaceAll(' ', '-')}`}>
+            <a key={item} href={getSectionHref(item)}>
               {item}
             </a>
           )
@@ -64,7 +68,7 @@ export function Header({
             ) : (
               <a
                 key={item}
-                href={`#${item.toLowerCase().replaceAll(' ', '-')}`}
+                href={getSectionHref(item)}
                 onClick={() => setIsMenuOpen(false)}
               >
                 {item}
