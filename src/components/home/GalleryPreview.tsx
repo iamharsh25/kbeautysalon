@@ -1,30 +1,33 @@
 import type { GalleryAlbum } from '../../types';
-import { SectionHeading } from './SectionHeading';
+import { ArrowRight } from 'lucide-react';
 
 export function GalleryPreview({
   albums,
-  instagramUrl,
   onAlbumOpen,
 }: {
   albums: GalleryAlbum[];
-  instagramUrl: string;
   onAlbumOpen: (album: GalleryAlbum) => void;
 }) {
   return (
     <section className="section gallery-section" id="gallery">
-      <SectionHeading eyebrow="Come On Our Journey" title="@kbeautyglamsalon" />
+      <div className="section-heading">
+        <p>Our Albums</p>
+        <h2>Moments That Define Beauty</h2>
+        <span className="heading-rule centered" />
+      </div>
       <div className="album-grid">
         {albums.map((album) => (
           <button className="album-card" key={album.title} type="button" onClick={() => onAlbumOpen(album)}>
             <img src={album.cover} alt="" loading="lazy" />
-            <span>{album.photos.length} photos</span>
             <h3>{album.title}</h3>
-            <p>{album.description}</p>
-            <strong>Open Album</strong>
+            <span>{album.photos.length} Photos</span>
           </button>
         ))}
       </div>
-      <a className="outline-button" href={instagramUrl} target="_blank" rel="noreferrer">View Instagram</a>
+      <a className="outline-button" href="/#gallery">
+        View All Albums
+        <ArrowRight size={16} />
+      </a>
     </section>
   );
 }

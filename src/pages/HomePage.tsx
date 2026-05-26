@@ -1,54 +1,58 @@
 import { ContactBand } from '../components/layout/ContactBand';
 import { Header } from '../components/layout/Header';
-import { LoginModal } from '../components/layout/LoginModal';
 import { FounderStory } from '../components/home/FounderStory';
 import { GalleryPreview } from '../components/home/GalleryPreview';
 import { Hero } from '../components/home/Hero';
 import { ServicesPreview } from '../components/home/ServicesPreview';
-import type { GalleryAlbum, HomePageImage, Service, SiteSettings } from '../types';
+import type { GalleryAlbum, HomePageImage, Service, ServiceCategory, SiteSettings } from '../types';
 
 type HomePageProps = {
   albums: GalleryAlbum[];
+  currentUserFullName?: string;
   homePageImages: HomePageImage[];
-  isLoginOpen: boolean;
-  loginError: string;
+  isSignedIn: boolean;
+  serviceCategories: ServiceCategory[];
   services: Service[];
   settings: SiteSettings;
   onAlbumOpen: (album: GalleryAlbum) => void;
-  onBookClick: () => void;
-  onCloseLogin: () => void;
-  onLogin: (email: string, password: string) => void | Promise<void>;
+  onAccountClick: () => void;
   onLoginClick: () => void;
+  onLogout: () => void;
   onServicesClick: () => void;
 };
 
 export function HomePage({
   albums,
+  currentUserFullName,
   homePageImages,
-  isLoginOpen,
-  loginError,
+  isSignedIn,
   onAlbumOpen,
-  onBookClick,
-  onCloseLogin,
-  onLogin,
+  onAccountClick,
   onLoginClick,
+  onLogout,
   onServicesClick,
+  serviceCategories,
   services,
   settings,
 }: HomePageProps) {
   return (
     <>
-      <Header logoUrl={settings.logoUrl} onBookClick={onBookClick} onLoginClick={onLoginClick} onServicesClick={onServicesClick} />
+      <Header
+        currentUserFullName={currentUserFullName}
+        isSignedIn={isSignedIn}
+        logoUrl={settings.logoUrl}
+        onAccountClick={onAccountClick}
+        onLoginClick={onLoginClick}
+        onLogout={onLogout}
+        onServicesClick={onServicesClick}
+      />
       <main>
-        <Hero images={homePageImages} onBookClick={onBookClick} onServicesClick={onServicesClick} />
-        <ServicesPreview services={services} onViewAll={onServicesClick} />
-        <FounderStory />
-        <GalleryPreview albums={albums} instagramUrl={settings.instagramUrl} onAlbumOpen={onAlbumOpen} />
+        <Hero images={homePageImages} onGalleryClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })} onServicesClick={onServicesClick} />
+        <ServicesPreview serviceCategories={serviceCategories} services={services} onViewAll={onServicesClick} />
+        <FounderStory instagramUrl={settings.instagramUrl} />
+        <GalleryPreview albums={albums} onAlbumOpen={onAlbumOpen} />
       </main>
       <ContactBand settings={settings} />
-      {isLoginOpen ? (
-        <LoginModal error={loginError} onClose={onCloseLogin} onLogin={onLogin} />
-      ) : null}
     </>
   );
 }

@@ -1,19 +1,26 @@
 import { useState } from 'react';
-import { Menu } from 'lucide-react';
+import { LogOut, Menu, UserRound } from 'lucide-react';
 import { navItems } from '../../data/initialData';
 
 export function Header({
+  currentUserFullName,
+  isSignedIn,
   logoUrl,
-  onBookClick,
+  onAccountClick,
   onLoginClick,
+  onLogout,
   onServicesClick,
 }: {
+  currentUserFullName?: string;
+  isSignedIn: boolean;
   logoUrl: string;
-  onBookClick: () => void;
+  onAccountClick: () => void;
   onLoginClick: () => void;
+  onLogout: () => void;
   onServicesClick?: () => void;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
 
   function getSectionHref(item: string) {
     return `/#${item.toLowerCase().replaceAll(' ', '-')}`;
@@ -23,7 +30,9 @@ export function Header({
     <header className="site-header">
       <a className="brand" href="/#home" aria-label="K Beauty Salon home">
         <img className="brand-logo" src={logoUrl} alt="" />
-        <span>K Beauty Salon</span>
+        <span>
+          <strong>K Beauty Salon</strong>
+        </span>
       </a>
 
       <nav className="desktop-nav" aria-label="Main navigation">
@@ -36,8 +45,28 @@ export function Header({
             </a>
           )
         ))}
-        <button className="nav-login-button" type="button" onClick={onBookClick}>Book Now</button>
-        <button className="nav-login-button" type="button" onClick={onLoginClick}>Login</button>
+        {isSignedIn ? (
+          <div className="public-account-menu">
+            <button className="public-account-button" type="button" onClick={() => setIsAccountOpen((isOpen) => !isOpen)}>
+              <UserRound size={18} />
+              {currentUserFullName || 'Account'}
+            </button>
+            {isAccountOpen ? (
+              <div className="public-account-dropdown">
+                <button type="button" onClick={onAccountClick}>
+                  <UserRound size={16} />
+                  Account
+                </button>
+                <button type="button" onClick={onLogout}>
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <button className="nav-login-button outline" type="button" onClick={onLoginClick}>Login</button>
+        )}
       </nav>
 
       <button
@@ -75,26 +104,41 @@ export function Header({
               </a>
             )
           ))}
-          <button
-            className="mobile-login-button"
-            type="button"
-            onClick={() => {
-              setIsMenuOpen(false);
-              onBookClick();
-            }}
-          >
-            Book Now
-          </button>
-          <button
-            className="mobile-login-button"
-            type="button"
-            onClick={() => {
-              setIsMenuOpen(false);
-              onLoginClick();
-            }}
-          >
-            Login
-          </button>
+          {isSignedIn ? (
+            <>
+              <button
+                className="mobile-login-button"
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onAccountClick();
+                }}
+              >
+                Account
+              </button>
+              <button
+                className="mobile-login-button"
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onLogout();
+                }}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <button
+              className="mobile-login-button"
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                onLoginClick();
+              }}
+            >
+              Login
+            </button>
+          )}
         </nav>
       ) : null}
     </header>

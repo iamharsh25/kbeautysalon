@@ -12,6 +12,10 @@ export function GalleryAlbumPage({
   onBack: () => void;
   onAlbumChange: (album: GalleryAlbum) => void;
 }) {
+  const headingImages = album.headingImageUrls?.length
+    ? album.headingImageUrls.map((url) => album.photos.find((photo) => photo.url === url) ?? { title: album.title, alt: album.title, url })
+    : album.photos.slice(0, 3);
+
   return (
     <main className="album-page">
       <section className="album-hero">
@@ -24,7 +28,7 @@ export function GalleryAlbumPage({
           <span>{album.description}</span>
         </div>
         <div className="album-hero-stack" aria-hidden="true">
-          {album.photos.slice(0, 3).map((photo) => (
+          {headingImages.slice(0, 3).map((photo) => (
             <img key={photo.url} src={photo.url} alt="" />
           ))}
         </div>

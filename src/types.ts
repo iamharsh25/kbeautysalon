@@ -17,6 +17,9 @@ export type Service = {
 export type ServiceCategory = {
   id?: string;
   name: string;
+  imageUrl?: string;
+  iconKey?: string;
+  backgroundColor?: string;
   subCategories: Array<{
     id?: string;
     name: string;
@@ -33,6 +36,7 @@ export type GalleryAlbum = {
   title: string;
   description: string;
   cover: string;
+  headingImageUrls?: string[];
   photos: GalleryImage[];
 };
 

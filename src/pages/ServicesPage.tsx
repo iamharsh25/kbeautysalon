@@ -1,26 +1,42 @@
-import { ArrowRight, CalendarDays, CheckCircle2, Heart, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
+import { Heart, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
 import { Header } from '../components/layout/Header';
-import type { Service, SiteSettings } from '../types';
+import type { Service, ServiceCategory, SiteSettings } from '../types';
 import { getServiceCategoryGroups } from '../utils/serviceCatalog';
 
 export function ServicesPage({
+  currentUserFullName,
+  isSignedIn,
+  onAccountClick,
   onBack,
-  onBookClick,
   onLoginClick,
+  onLogout,
+  serviceCategories,
   services,
   settings,
 }: {
+  currentUserFullName?: string;
+  isSignedIn: boolean;
+  onAccountClick: () => void;
   onBack: () => void;
-  onBookClick: () => void;
   onLoginClick: () => void;
+  onLogout: () => void;
+  serviceCategories: ServiceCategory[];
   services: Service[];
   settings: SiteSettings;
 }) {
-  const serviceGroups = getServiceCategoryGroups(services);
+  const serviceGroups = getServiceCategoryGroups(services, serviceCategories);
 
   return (
     <>
-      <Header logoUrl={settings.logoUrl} onBookClick={onBookClick} onLoginClick={onLoginClick} onServicesClick={() => undefined} />
+      <Header
+        currentUserFullName={currentUserFullName}
+        isSignedIn={isSignedIn}
+        logoUrl={settings.logoUrl}
+        onAccountClick={onAccountClick}
+        onLoginClick={onLoginClick}
+        onLogout={onLogout}
+        onServicesClick={() => undefined}
+      />
       <main className="services-page">
         <section className="services-hero">
           <div>
@@ -52,12 +68,8 @@ export function ServicesPage({
               </div>
             ))}
             <div className="services-book-card">
-              <h2>Ready for a Makeover?</h2>
-              <p>Book your appointment today and let our experts bring out the best in you.</p>
-              <button type="button" onClick={onBookClick}>
-                <CalendarDays size={17} />
-                Book Appointment
-              </button>
+              <h2>Need help choosing?</h2>
+              <p>Explore each category and sub category, then contact the salon for the best recommendation.</p>
             </div>
           </aside>
 
@@ -68,14 +80,19 @@ export function ServicesPage({
                 <div>
                   <header>
                     <h2><group.icon size={24} /> {group.name}</h2>
-                    <button type="button" onClick={onBookClick}>View All <ArrowRight size={16} /></button>
                   </header>
                   <div>
-                    {group.services.slice(0, 8).map((service) => (
-                      <div className="service-list-row" key={service.title}>
-                        <strong>{service.title}</strong>
-                        <span>{service.price}</span>
-                        <button type="button" onClick={onBookClick}>Book</button>
+                    {group.subCategories.map((subCategory) => (
+                      <div className="service-subcategory-group" key={`${group.name}-${subCategory.name}`}>
+                        <h3>{subCategory.name}</h3>
+                        {subCategory.services.length ? subCategory.services.map((service) => (
+                          <div className="service-list-row" key={`${service.id ?? service.title}-${service.subCategory ?? ''}`}>
+                            <strong>{service.title}</strong>
+                            <span>{service.price}</span>
+                          </div>
+                        )) : (
+                          <p>No services added yet.</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -83,17 +100,6 @@ export function ServicesPage({
               </article>
             ))}
           </div>
-        </section>
-
-        <section className="services-cta">
-          <div>
-            <CheckCircle2 size={36} />
-            <span>
-              <strong>Let's Pamper You!</strong>
-              <small>Book your appointment today and experience the best care.</small>
-            </span>
-          </div>
-          <button type="button" onClick={onBookClick}>Book Appointment <ArrowRight size={18} /></button>
         </section>
 
         <button className="services-back-button" type="button" onClick={onBack}>Back to Home</button>

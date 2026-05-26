@@ -1,10 +1,14 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import type { ServiceCategory } from '../types';
+import { sanitizeStorageFileName } from '../utils/homepageImages';
 
 type ServiceCategoryRow = {
   id: string;
   name: string;
   display_order: number;
+  image_url?: string | null;
+  icon_key?: string | null;
+  background_color?: string | null;
 };
 
 type ServiceSubCategoryRow = {
@@ -18,7 +22,7 @@ export async function getServiceCategories() {
   if (!isSupabaseConfigured || !supabase) return [];
 
   const [categoriesResult, subCategoriesResult] = await Promise.all([
-    supabase.from('service_categories').select('id,name,display_order').order('display_order', { ascending: true }),
+    supabase.from('service_categories').select('id,name,display_order,image_url,icon_key,background_color').order('display_order', { ascending: true }),
     supabase.from('service_sub_categories').select('id,category_id,name,display_order').order('display_order', { ascending: true }),
   ]);
 
@@ -29,6 +33,9 @@ export async function getServiceCategories() {
   return ((categoriesResult.data ?? []) as ServiceCategoryRow[]).map((category) => ({
     id: category.id,
     name: category.name,
+    imageUrl: category.image_url || undefined,
+    iconKey: category.icon_key || undefined,
+    backgroundColor: category.background_color || undefined,
     subCategories: subCategories
       .filter((subCategory) => subCategory.category_id === category.id)
       .map((subCategory) => ({
@@ -62,13 +69,16 @@ export async function saveServiceCategories(categories: ServiceCategory[]) {
   for (const [categoryIndex, category] of categories.entries()) {
     const categoryPayload = {
       name: category.name,
+      image_url: category.imageUrl || null,
+      icon_key: category.iconKey || null,
+      background_color: category.backgroundColor || null,
       display_order: categoryIndex,
       updated_at: new Date().toISOString(),
     };
 
     const categoryQuery = category.id
-      ? supabase.from('service_categories').update(categoryPayload).eq('id', category.id).select('id,name,display_order').single()
-      : supabase.from('service_categories').insert(categoryPayload).select('id,name,display_order').single();
+      ? supabase.from('service_categories').update(categoryPayload).eq('id', category.id).select('id,name,display_order,image_url,icon_key,background_color').single()
+      : supabase.from('service_categories').insert(categoryPayload).select('id,name,display_order,image_url,icon_key,background_color').single();
 
     const { data: savedCategory, error: categoryError } = await categoryQuery;
     if (categoryError || !savedCategory) throw new Error(categoryError?.message ?? 'Category could not be saved.');
@@ -117,9 +127,30 @@ export async function saveServiceCategories(categories: ServiceCategory[]) {
     savedCategories.push({
       id: savedCategory.id,
       name: savedCategory.name,
+      imageUrl: savedCategory.image_url || undefined,
+      iconKey: savedCategory.icon_key || undefined,
+      backgroundColor: savedCategory.background_color || undefined,
       subCategories: savedSubCategories,
     });
   }
 
   return savedCategories;
+}
+
+export async function uploadServiceCategoryImage(file: File) {
+  if (!isSupabaseConfigured || !supabase) return URL.createObjectURL(file);
+
+  const storagePath = `service-categories/${Date.now()}-${crypto.randomUUID()}-${sanitizeStorageFileName(file.name) || 'category'}`;
+  const { error: uploadError } = await supabase.storage
+    .from('site-assets')
+    .upload(storagePath, file, {
+      cacheControl: '3600',
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data } = supabase.storage.from('site-assets').getPublicUrl(storagePath);
+  return data.publicUrl;
 }

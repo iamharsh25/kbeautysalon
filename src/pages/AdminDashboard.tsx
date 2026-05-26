@@ -1,11 +1,11 @@
 import { useEffect, useState, type ChangeEvent, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Brush, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Flower2, Gift, Globe2, GripVertical, Hand, Home, Image, ImagePlus, LogOut, Mail, MoreVertical, Palette, Pencil, Plus, Save, Scissors, Search, Settings, Sparkles, Star, Tags, Trash2, UploadCloud, UserCheck, UsersRound, WandSparkles, X } from 'lucide-react';
-import { galleryAlbums } from '../data/initialData';
-import type { AdminSection, Booking, Customer, CustomerVoucher, GalleryImage, HomePageImage, Review, Service, ServiceCategory, SiteSettings, StaffMember, Voucher } from '../types';
+import { ArrowLeft, Brush, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Copy, ExternalLink, Flower2, Gift, Globe2, GripVertical, Hand, Home, Image, ImagePlus, Info, LogOut, Mail, MoreVertical, Palette, Pencil, Plus, Save, Scissors, Search, Settings, Sparkles, Star, Tags, Trash2, UploadCloud, UserCheck, UsersRound, WandSparkles, X } from 'lucide-react';
+import type { AdminSection, Booking, Customer, CustomerVoucher, GalleryAlbum, GalleryImage, HomePageImage, Review, Service, ServiceCategory, SiteSettings, StaffMember, Voucher } from '../types';
 import { AdminField, AdminPanel } from '../components/admin/AdminPrimitives';
 import { updateListItem } from '../utils/list';
 import { formatCurrency, formatDisplayDate } from '../utils/format';
+import { serviceCategoryIcons } from '../utils/serviceCatalog';
 
 type ConfirmDialogState = {
   title: string;
@@ -20,7 +20,7 @@ export function AdminDashboard({
   adminFullName,
   bookings,
   customers,
-  galleryImages,
+  galleryAlbums,
   homePageImages,
   reviews,
   services,
@@ -34,16 +34,20 @@ export function AdminDashboard({
   onCustomerVoucherAssign,
   onCustomerVoucherDelete,
   onCustomersChange,
+  onGalleryAlbumsChange,
   onGalleryChange,
   onHomePageImageDelete,
   onHomePageImagesReorder,
   onHomePageImagesUpload,
   onLogoUpload,
   onLogout,
+  onVisitWebsite,
   onReviewChange,
   onServiceChange,
   onServiceCreate,
   onServiceDelete,
+  onServiceCategoryImageUpload,
+  onServiceImageUpload,
   onServiceUpdate,
   onServiceCategoriesChange,
   onServiceCategoriesSave,
@@ -54,7 +58,7 @@ export function AdminDashboard({
   adminFullName: string;
   bookings: Booking[];
   customers: Customer[];
-  galleryImages: GalleryImage[];
+  galleryAlbums: GalleryAlbum[];
   homePageImages: HomePageImage[];
   reviews: Review[];
   services: Service[];
@@ -68,16 +72,20 @@ export function AdminDashboard({
   onCustomerVoucherAssign: (customerId: string, voucher: CustomerVoucher) => CustomerVoucher | Promise<CustomerVoucher>;
   onCustomerVoucherDelete: (customerId: string, voucherCode: string, voucherIndex: number, voucherAssignmentId?: string) => void | Promise<void>;
   onCustomersChange: (customers: Customer[]) => void;
+  onGalleryAlbumsChange: (albums: GalleryAlbum[]) => void;
   onGalleryChange: (galleryImages: GalleryImage[]) => void;
   onHomePageImageDelete: (image: HomePageImage) => void | Promise<void>;
   onHomePageImagesReorder: (images: HomePageImage[]) => void | Promise<void>;
   onHomePageImagesUpload: (files: File[]) => void | Promise<void>;
   onLogoUpload: (file: File) => string | Promise<string>;
   onLogout: () => void;
+  onVisitWebsite: () => void;
   onReviewChange: (reviews: Review[]) => void;
   onServiceChange: (services: Service[]) => void;
   onServiceCreate: (service: Service) => Service | Promise<Service>;
   onServiceDelete: (service: Service, index: number) => void | Promise<void>;
+  onServiceCategoryImageUpload: (file: File) => string | Promise<string>;
+  onServiceImageUpload: (file: File) => string | Promise<string>;
   onServiceUpdate: (service: Service, index: number) => Service | Promise<Service>;
   onServiceCategoriesChange: (categories: ServiceCategory[]) => void;
   onServiceCategoriesSave: (categories: ServiceCategory[]) => ServiceCategory[] | Promise<ServiceCategory[]>;
@@ -87,6 +95,7 @@ export function AdminDashboard({
 }) {
   const [activeSection, setActiveSection] = useState<AdminSection>('home-page');
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+  const [draggedGalleryImageUrl, setDraggedGalleryImageUrl] = useState<string | null>(null);
   const [homeImageStatus, setHomeImageStatus] = useState('');
   const [isEditingHomePage, setIsEditingHomePage] = useState(false);
   const [homeSettingsDraft, setHomeSettingsDraft] = useState(settings);
@@ -97,6 +106,13 @@ export function AdminDashboard({
   const [customerDraft, setCustomerDraft] = useState<Customer | null>(null);
   const [isCustomerCreateOpen, setIsCustomerCreateOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
+  const [galleryDraftAlbums, setGalleryDraftAlbums] = useState(galleryAlbums);
+  const [selectedGalleryAlbumTitle, setSelectedGalleryAlbumTitle] = useState('');
+  const [galleryAlbumSearch, setGalleryAlbumSearch] = useState('');
+  const [galleryAlbumFilter, setGalleryAlbumFilter] = useState('All Albums');
+  const [galleryImageSearch, setGalleryImageSearch] = useState('');
+  const [galleryImageFilter, setGalleryImageFilter] = useState('All Images');
+  const [galleryStatus, setGalleryStatus] = useState('');
   const [voucherToAssign, setVoucherToAssign] = useState(vouchers.find((voucher) => voucher.status === 'Active')?.code ?? vouchers[0]?.code ?? '');
   const [voucherStartDate, setVoucherStartDate] = useState('2026-05-21');
   const [voucherExpiryDate, setVoucherExpiryDate] = useState('2026-08-21');
@@ -104,6 +120,7 @@ export function AdminDashboard({
   const [serviceCategoryFilter, setServiceCategoryFilter] = useState('All Categories');
   const [editingServiceIndex, setEditingServiceIndex] = useState<number | null>(null);
   const [serviceDraft, setServiceDraft] = useState<Service | null>(null);
+  const [serviceSaveStatus, setServiceSaveStatus] = useState('');
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [servicePage, setServicePage] = useState(1);
@@ -155,6 +172,30 @@ export function AdminDashboard({
   const homeSettings = isEditingHomePage ? homeSettingsDraft : settings;
   const selectedServiceCategory = serviceCategories.find((category) => category.name === serviceDraft?.category);
   const selectedServiceSubCategories = selectedServiceCategory?.subCategories ?? [];
+  const selectedGalleryAlbum = selectedGalleryAlbumTitle
+    ? galleryDraftAlbums.find((album) => album.title === selectedGalleryAlbumTitle)
+    : undefined;
+  const selectedGalleryAlbumIndex = selectedGalleryAlbum
+    ? galleryDraftAlbums.findIndex((album) => album.title === selectedGalleryAlbum.title)
+    : -1;
+  const selectedGalleryHeadingUrls = selectedGalleryAlbum?.headingImageUrls?.length
+    ? selectedGalleryAlbum.headingImageUrls
+    : selectedGalleryAlbum?.photos.slice(0, 3).map((photo) => photo.url) ?? [];
+  const filteredGalleryPhotos = selectedGalleryAlbum?.photos.filter((photo) => {
+    const matchesSearch = !galleryImageSearch.trim()
+      || [photo.title, photo.alt].join(' ').toLowerCase().includes(galleryImageSearch.trim().toLowerCase());
+    const matchesFilter = galleryImageFilter === 'All Images'
+      || (galleryImageFilter === 'Heading Images' && selectedGalleryHeadingUrls.includes(photo.url))
+      || (galleryImageFilter === 'Thumbnail' && photo.url === selectedGalleryAlbum.cover);
+    return matchesSearch && matchesFilter;
+  }) ?? [];
+  const filteredGalleryAlbums = galleryDraftAlbums.filter((album) => {
+    const matchesSearch = !galleryAlbumSearch.trim()
+      || [album.title, album.description].join(' ').toLowerCase().includes(galleryAlbumSearch.trim().toLowerCase());
+    return galleryAlbumFilter === 'All Albums' && matchesSearch;
+  });
+  const totalGalleryImages = galleryDraftAlbums.reduce((total, album) => total + album.photos.length, 0);
+  const totalGalleryHeadingImages = galleryDraftAlbums.reduce((total, album) => total + (album.headingImageUrls?.length ?? Math.min(album.photos.length, 3)), 0);
 
   useEffect(() => {
     if (!isEditingHomePage) {
@@ -182,6 +223,11 @@ export function AdminDashboard({
     setIsEditingCustomer(false);
     setCustomerDraft(null);
   }, [adminSection, customerId]);
+
+  useEffect(() => {
+    setGalleryDraftAlbums(galleryAlbums);
+    setSelectedGalleryAlbumTitle((currentTitle) => galleryAlbums.some((album) => album.title === currentTitle) ? currentTitle : '');
+  }, [galleryAlbums]);
 
   function navigateToAdminSection(sectionId: AdminSection) {
     setActiveSection(sectionId);
@@ -376,6 +422,150 @@ export function AdminDashboard({
       });
   }
 
+  function updateSelectedGalleryAlbum(patch: Partial<GalleryAlbum>) {
+    if (selectedGalleryAlbumIndex < 0) return;
+
+    setGalleryDraftAlbums((currentAlbums) => currentAlbums.map((album, index) => index === selectedGalleryAlbumIndex ? {
+      ...album,
+      ...patch,
+    } : album));
+
+    if (patch.title) {
+      setSelectedGalleryAlbumTitle(patch.title);
+    }
+  }
+
+  function createGalleryPhoto(file: File): GalleryImage {
+    const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || 'Gallery image';
+    return {
+      title,
+      alt: title,
+      url: URL.createObjectURL(file),
+    };
+  }
+
+  function addGalleryPhotos(files: File[], options: { headingOnly?: boolean } = {}) {
+    if (!selectedGalleryAlbum) return;
+    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+    if (!imageFiles.length) return;
+
+    const newPhotos = imageFiles.map(createGalleryPhoto);
+    const nextPhotos = [...selectedGalleryAlbum.photos, ...newPhotos];
+    const nextHeadingUrls = options.headingOnly
+      ? [...selectedGalleryHeadingUrls, ...newPhotos.map((photo) => photo.url)].slice(0, 3)
+      : selectedGalleryHeadingUrls;
+
+    updateSelectedGalleryAlbum({
+      photos: nextPhotos,
+      headingImageUrls: nextHeadingUrls,
+      cover: selectedGalleryAlbum.cover || newPhotos[0]?.url || '',
+    });
+    setGalleryStatus(options.headingOnly ? 'Heading image added. Click Save Changes to publish.' : 'Images added. Click Save Changes to publish.');
+  }
+
+  function handleGalleryUpload(event: ChangeEvent<HTMLInputElement>, options: { headingOnly?: boolean } = {}) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    addGalleryPhotos(files, options);
+  }
+
+  function handleGalleryDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    addGalleryPhotos(Array.from(event.dataTransfer.files));
+  }
+
+  function toggleGalleryHeadingImage(photo: GalleryImage) {
+    const isSelected = selectedGalleryHeadingUrls.includes(photo.url);
+    const nextHeadingUrls = isSelected
+      ? selectedGalleryHeadingUrls.filter((url) => url !== photo.url)
+      : [...selectedGalleryHeadingUrls, photo.url].slice(0, 3);
+
+    updateSelectedGalleryAlbum({ headingImageUrls: nextHeadingUrls });
+    setGalleryStatus(isSelected ? 'Heading image removed. Click Save Changes to publish.' : 'Heading image selected. Click Save Changes to publish.');
+  }
+
+  function removeGalleryHeadingImage(url: string) {
+    updateSelectedGalleryAlbum({ headingImageUrls: selectedGalleryHeadingUrls.filter((headingUrl) => headingUrl !== url) });
+    setGalleryStatus('Heading image removed. Click Save Changes to publish.');
+  }
+
+  function deleteGalleryPhoto(photo: GalleryImage) {
+    if (!selectedGalleryAlbum) return;
+    requestConfirmation({
+      title: 'Delete image?',
+      message: 'This image will be removed from the album. This action cannot be undone after saving.',
+      confirmLabel: 'Delete Image',
+      onConfirm: () => {
+        const nextPhotos = selectedGalleryAlbum.photos.filter((item) => item.url !== photo.url);
+        const nextCover = selectedGalleryAlbum.cover === photo.url ? nextPhotos[0]?.url ?? '' : selectedGalleryAlbum.cover;
+        const nextHeadingUrls = selectedGalleryHeadingUrls.filter((url) => url !== photo.url);
+        updateSelectedGalleryAlbum({
+          cover: nextCover,
+          headingImageUrls: nextHeadingUrls,
+          photos: nextPhotos,
+        });
+        setGalleryStatus('Image deleted. Click Save Changes to publish.');
+      },
+    });
+  }
+
+  function handleGalleryPhotoDrop(event: DragEvent<HTMLDivElement>, targetUrl: string) {
+    event.preventDefault();
+    if (!selectedGalleryAlbum || !draggedGalleryImageUrl || draggedGalleryImageUrl === targetUrl) return;
+
+    const draggedIndex = selectedGalleryAlbum.photos.findIndex((photo) => photo.url === draggedGalleryImageUrl);
+    const targetIndex = selectedGalleryAlbum.photos.findIndex((photo) => photo.url === targetUrl);
+    if (draggedIndex < 0 || targetIndex < 0) return;
+
+    const reorderedPhotos = [...selectedGalleryAlbum.photos];
+    const [draggedPhoto] = reorderedPhotos.splice(draggedIndex, 1);
+    reorderedPhotos.splice(targetIndex, 0, draggedPhoto);
+    updateSelectedGalleryAlbum({ photos: reorderedPhotos });
+    setDraggedGalleryImageUrl(null);
+    setGalleryStatus('Image order changed. Click Save Changes to publish.');
+  }
+
+  function handleGallerySave() {
+    onGalleryAlbumsChange(galleryDraftAlbums);
+    onGalleryChange(galleryDraftAlbums.flatMap((album) => album.photos));
+    setGalleryStatus('Gallery changes saved.');
+  }
+
+  function handleGalleryCancel() {
+    setGalleryDraftAlbums(galleryAlbums);
+    setGalleryStatus('');
+  }
+
+  function handleAddGalleryAlbum() {
+    const nextNumber = galleryDraftAlbums.length + 1;
+    const newAlbum: GalleryAlbum = {
+      title: `New Album ${nextNumber}`,
+      description: 'Add a short description for this album.',
+      cover: '',
+      headingImageUrls: [],
+      photos: [],
+    };
+    setGalleryDraftAlbums((currentAlbums) => [...currentAlbums, newAlbum]);
+    setSelectedGalleryAlbumTitle(newAlbum.title);
+    setGalleryStatus('New album created. Add images and click Save Changes.');
+  }
+
+  function handleDeleteGalleryAlbum(album: GalleryAlbum) {
+    requestConfirmation({
+      title: 'Delete album?',
+      message: `This will remove "${album.title}" and its ${album.photos.length} image${album.photos.length === 1 ? '' : 's'} from the gallery.`,
+      confirmLabel: 'Delete Album',
+      onConfirm: () => {
+        const nextAlbums = galleryDraftAlbums.filter((item) => item.title !== album.title);
+        setGalleryDraftAlbums(nextAlbums);
+        onGalleryAlbumsChange(nextAlbums);
+        onGalleryChange(nextAlbums.flatMap((item) => item.photos));
+        setSelectedGalleryAlbumTitle('');
+        setGalleryStatus('Album deleted.');
+      },
+    });
+  }
+
   function handleHomeImageDelete(image: HomePageImage) {
     if (!isEditingHomePage) return;
     requestConfirmation({
@@ -531,6 +721,7 @@ export function AdminDashboard({
     }, services.length);
     setEditingServiceIndex(services.length);
     setServiceDraft(nextService);
+    setServiceSaveStatus('');
     setIsServiceModalOpen(true);
   }
 
@@ -538,6 +729,7 @@ export function AdminDashboard({
     const index = findServiceIndex(services, service);
     setEditingServiceIndex(index >= 0 ? index : null);
     setServiceDraft({ ...service });
+    setServiceSaveStatus('');
     setIsServiceModalOpen(true);
   }
 
@@ -545,9 +737,43 @@ export function AdminDashboard({
     setServiceDraft((currentDraft) => currentDraft ? normalizeAdminService({ ...currentDraft, ...patch }, editingServiceIndex ?? services.length) : currentDraft);
   }
 
+  function updateServicePriceDraft(field: 'fixedPrice' | 'minPrice' | 'maxPrice', value: string) {
+    const numericValue = value === '' ? undefined : Number(value);
+    setServiceDraft((currentDraft) => currentDraft ? {
+      ...currentDraft,
+      [field]: numericValue,
+    } : currentDraft);
+  }
+
+  async function handleServiceImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setServiceSaveStatus('Uploading service image...');
+    try {
+      const imageUrl = await onServiceImageUpload(file);
+      updateServiceDraft({ image: imageUrl });
+      setServiceSaveStatus('Image uploaded. Save the service to publish it.');
+    } catch (error) {
+      setServiceSaveStatus(error instanceof Error ? error.message : 'Service image could not be uploaded.');
+    }
+  }
+
   async function handleServiceSave() {
     if (!serviceDraft) return;
-    const normalizedService = normalizeAdminService(serviceDraft, editingServiceIndex ?? services.length);
+    const selectedCategory = serviceCategories.find((category) => category.name === serviceDraft.category);
+    const selectedSubCategory = serviceDraft.subCategory?.trim() ?? '';
+    const isKnownSubCategory = !selectedSubCategory || selectedCategory?.subCategories.some((subCategory) => subCategory.name === selectedSubCategory);
+    if (selectedSubCategory && !isKnownSubCategory) {
+      setServiceSaveStatus('Please select a valid sub category before saving the service.');
+      return;
+    }
+
+    const normalizedService = normalizeAdminService({
+      ...serviceDraft,
+      subCategory: selectedSubCategory,
+    }, editingServiceIndex ?? services.length);
     if (editingServiceIndex === services.length || editingServiceIndex === null || !services[editingServiceIndex]) {
       const createdService = await onServiceCreate(normalizedService);
       onServiceChange([...services, createdService]);
@@ -558,11 +784,13 @@ export function AdminDashboard({
     setEditingServiceIndex(null);
     setServiceDraft(null);
     setIsServiceModalOpen(false);
+    setServiceSaveStatus('');
   }
 
   function handleServiceCancel() {
     setEditingServiceIndex(null);
     setServiceDraft(null);
+    setServiceSaveStatus('');
     setIsServiceModalOpen(false);
   }
 
@@ -573,6 +801,8 @@ export function AdminDashboard({
       ...serviceCategories,
       {
         name,
+        iconKey: 'spa',
+        backgroundColor: '#0b4b3a',
         subCategories: [],
       },
     ];
@@ -591,6 +821,29 @@ export function AdminDashboard({
     updatedServices.forEach((service, index) => {
       if (service.category === nextName) void onServiceUpdate(service, index);
     });
+  }
+
+  function updateCategoryDetails(categoryIndex: number, patch: Partial<ServiceCategory>) {
+    onServiceCategoriesChange(serviceCategories.map((category, index) => index === categoryIndex ? {
+      ...category,
+      ...patch,
+    } : category));
+    setCategoryStatus('Category updated. Click Save Categories to publish.');
+  }
+
+  async function handleCategoryImageUpload(categoryIndex: number, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setCategoryStatus('Uploading category image...');
+    try {
+      const imageUrl = await onServiceCategoryImageUpload(file);
+      updateCategoryDetails(categoryIndex, { imageUrl });
+      setCategoryStatus('Category image uploaded. Click Save Categories to publish.');
+    } catch (error) {
+      setCategoryStatus(error instanceof Error ? error.message : 'Category image could not be uploaded.');
+    }
   }
 
   function addSubCategory(categoryIndex: number) {
@@ -685,7 +938,11 @@ export function AdminDashboard({
     }
   }
 
-  function getCategoryIcon(categoryName: string) {
+  function getCategoryIcon(categoryName: string, iconKey?: string) {
+    if (iconKey && serviceCategoryIcons[iconKey]) {
+      const Icon = serviceCategoryIcons[iconKey].icon;
+      return <Icon size={20} />;
+    }
     const name = categoryName.toLowerCase();
     if (name.includes('hair')) return <Scissors size={20} />;
     if (name.includes('make')) return <WandSparkles size={20} />;
@@ -717,7 +974,7 @@ export function AdminDashboard({
             </button>
           ))}
         </nav>
-        <button className="admin-logout-button" type="button" onClick={onLogout}>
+        <button className="admin-logout-button" type="button" onClick={onVisitWebsite}>
           <Globe2 size={18} />
           View Website
           <ExternalLink size={16} />
@@ -833,7 +1090,7 @@ export function AdminDashboard({
                 <div>
                   <strong>Your website is looking great!</strong>
                   <p>Keep your content updated to attract more clients and grow your business.</p>
-                  <button className="small-admin-button" type="button" onClick={onLogout}>
+                  <button className="small-admin-button" type="button" onClick={onVisitWebsite}>
                     View Website
                     <ExternalLink size={15} />
                   </button>
@@ -1247,34 +1504,240 @@ export function AdminDashboard({
         ) : null}
 
         {activeSection === 'gallery' ? (
-          <AdminPanel icon={<Image size={20} />} title="Manage gallery albums and images">
-            <div className="admin-grid">
-              {galleryAlbums.map((album) => (
-                <div className="admin-item" key={album.title}>
-                  <img className="admin-image-preview" src={album.cover} alt="" />
-                  <AdminField label="Album name"><input readOnly value={album.title} /></AdminField>
-                  <AdminField label="Album description"><textarea readOnly value={album.description} /></AdminField>
-                  <button className="small-admin-button" type="button"><Plus size={16} /> Upload Image</button>
+          <div className="gallery-manager">
+            {selectedGalleryAlbum ? (
+              <>
+                <button className="back-button admin-back-button" type="button" onClick={() => setSelectedGalleryAlbumTitle('')}>
+                  <ArrowLeft size={16} />
+                  Back to Gallery
+                </button>
+                <div className="gallery-manager-title">
+                  <h1>{selectedGalleryAlbum.title}</h1>
+                  <Pencil size={18} />
+                  <span>Manage your album images and settings.</span>
                 </div>
-              ))}
-            </div>
-            {galleryImages.map((image, index) => (
-              <div className="admin-item" key={image.alt}>
-                <AdminField label="Image title">
-                  <input
-                    value={image.title}
-                    onChange={(event) => updateListItem(galleryImages, index, { ...image, title: event.target.value }, onGalleryChange)}
-                  />
-                </AdminField>
-                <AdminField label="Image URL">
-                  <input
-                    value={image.url}
-                    onChange={(event) => updateListItem(galleryImages, index, { ...image, url: event.target.value }, onGalleryChange)}
-                  />
-                </AdminField>
-              </div>
-            ))}
-          </AdminPanel>
+                <div className="gallery-manager-grid">
+                  <section className="gallery-settings-panel">
+                    <h2>Album Details</h2>
+                    <AdminField label="Album Title">
+                      <input value={selectedGalleryAlbum.title} onChange={(event) => updateSelectedGalleryAlbum({ title: event.target.value })} />
+                    </AdminField>
+                    <AdminField label="Album Description">
+                      <textarea value={selectedGalleryAlbum.description} onChange={(event) => updateSelectedGalleryAlbum({ description: event.target.value })} />
+                    </AdminField>
+                    <div className="gallery-field-block">
+                      <strong>Album Thumbnail</strong>
+                      <span>Select only 1 thumbnail image for this album.</span>
+                      <div className="gallery-thumbnail-row">
+                        {selectedGalleryAlbum.cover ? (
+                          <button className="gallery-thumbnail-card selected" type="button">
+                            <img src={selectedGalleryAlbum.cover} alt="" />
+                            <CheckCircle2 size={22} />
+                          </button>
+                        ) : null}
+                        <label className="gallery-upload-tile">
+                          <Image size={22} />
+                          <strong>Select New</strong>
+                          <span>JPG, PNG (Max. 2MB)</span>
+                          <input accept="image/*" type="file" onChange={(event) => handleGalleryUpload(event)} />
+                        </label>
+                      </div>
+                    </div>
+                    <div className="gallery-field-block">
+                      <strong>Album Heading Images</strong>
+                      <span>Select up to 3 images to display as the album heading.</span>
+                      <div className="gallery-heading-image-row">
+                        {selectedGalleryHeadingUrls.map((url) => (
+                          <div className="gallery-heading-card" key={url}>
+                            <img src={url} alt="" />
+                            <button type="button" aria-label="Remove heading image" onClick={() => removeGalleryHeadingImage(url)}>
+                              <X size={15} />
+                            </button>
+                          </div>
+                        ))}
+                        {selectedGalleryHeadingUrls.length < 3 ? (
+                          <label className="gallery-add-heading-card">
+                            <Plus size={26} />
+                            <strong>Add Image</strong>
+                            <span>You can add up to 3 images</span>
+                            <input accept="image/*" type="file" onChange={(event) => handleGalleryUpload(event, { headingOnly: true })} />
+                          </label>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="gallery-info-box">
+                      <Info size={20} />
+                      <div>
+                        <strong>Info</strong>
+                        <ul>
+                          <li>Thumbnail image will be used as the album cover in listings.</li>
+                          <li>Heading images appear at the top of the album page.</li>
+                          <li>Drag album images on the right to change their display order.</li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="gallery-save-actions">
+                      <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleGalleryCancel}>Cancel</button>
+                      <button className="small-admin-button" type="button" onClick={handleGallerySave}>
+                        <Save size={16} />
+                        Save Changes
+                      </button>
+                    </div>
+                    {galleryStatus ? <p className="admin-status-text">{galleryStatus}</p> : null}
+                  </section>
+                  <section className="gallery-images-panel">
+                    <div className="gallery-panel-heading">
+                      <h2>Album Images</h2>
+                      <span>{selectedGalleryAlbum.photos.length} Images</span>
+                    </div>
+                    <div className="gallery-alert">
+                      <Info size={18} />
+                      Upload new images or manage existing images in this album.
+                    </div>
+                    <label className="gallery-dropzone" onDrop={handleGalleryDrop} onDragOver={(event) => event.preventDefault()}>
+                      <UploadCloud size={22} />
+                      <strong>Upload Images</strong>
+                      <span>JPG, PNG (Max. 5MB each)</span>
+                      <input accept="image/*" multiple type="file" onChange={(event) => handleGalleryUpload(event)} />
+                    </label>
+                    <div className="gallery-image-toolbar">
+                      <select value={galleryImageFilter} onChange={(event) => setGalleryImageFilter(event.target.value)}>
+                        <option>All Images</option>
+                        <option>Heading Images</option>
+                        <option>Thumbnail</option>
+                      </select>
+                      <label>
+                        <Search size={16} />
+                        <input value={galleryImageSearch} placeholder="Search images..." onChange={(event) => setGalleryImageSearch(event.target.value)} />
+                      </label>
+                    </div>
+                    <div className="gallery-admin-grid">
+                      {filteredGalleryPhotos.length ? filteredGalleryPhotos.map((photo) => {
+                        const isCover = selectedGalleryAlbum.cover === photo.url;
+                        const isHeading = selectedGalleryHeadingUrls.includes(photo.url);
+                        return (
+                          <div
+                            className={isCover ? 'gallery-admin-photo selected' : 'gallery-admin-photo'}
+                            draggable
+                            key={photo.url}
+                            onDragStart={() => setDraggedGalleryImageUrl(photo.url)}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => handleGalleryPhotoDrop(event, photo.url)}
+                          >
+                            <button className="gallery-photo-select" type="button" onClick={() => updateSelectedGalleryAlbum({ cover: photo.url })} aria-label="Set as album thumbnail">
+                              {isCover ? <CheckCircle2 size={24} /> : <Image size={18} />}
+                            </button>
+                            <img src={photo.url} alt={photo.alt} />
+                            <button className="gallery-photo-heading" type="button" onClick={() => toggleGalleryHeadingImage(photo)}>
+                              {isHeading ? 'Heading' : 'Use Heading'}
+                            </button>
+                            <button className="gallery-photo-delete" type="button" aria-label={`Delete ${photo.title}`} onClick={() => deleteGalleryPhoto(photo)}>
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        );
+                      }) : (
+                        <div className="empty-admin-state">
+                          <strong>No images found</strong>
+                          <span>Upload an image or clear the search field.</span>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="gallery-overview-header">
+                  <div>
+                    <p>Gallery Management</p>
+                    <h1>Manage Gallery</h1>
+                    <span>Create and manage albums to showcase your salon's work.</span>
+                  </div>
+                  <button className="small-admin-button" type="button" onClick={handleAddGalleryAlbum}>
+                    <Plus size={16} />
+                    Add New Album
+                  </button>
+                </div>
+
+                <div className="gallery-stat-grid">
+                  <div className="gallery-stat-card">
+                    <span><Tags size={24} /></span>
+                    <div><small>Total Albums</small><strong>{galleryDraftAlbums.length}</strong><small>Albums created</small></div>
+                  </div>
+                  <div className="gallery-stat-card orange">
+                    <span><Image size={24} /></span>
+                    <div><small>Total Images</small><strong>{totalGalleryImages}</strong><small>Images uploaded</small></div>
+                  </div>
+                  <div className="gallery-stat-card">
+                    <span><Copy size={24} /></span>
+                    <div><small>Cover Images</small><strong>{galleryDraftAlbums.filter((album) => album.cover).length}</strong><small>Album thumbnails</small></div>
+                  </div>
+                  <div className="gallery-stat-card purple">
+                    <span><Sparkles size={24} /></span>
+                    <div><small>Heading Images</small><strong>{totalGalleryHeadingImages}</strong><small>3 per album</small></div>
+                  </div>
+                </div>
+
+                <section className="gallery-albums-panel">
+                  <div className="gallery-albums-heading">
+                    <div>
+                      <h2>Albums</h2>
+                      <span>Manage and organize your gallery albums.</span>
+                    </div>
+                    <div className="gallery-image-toolbar">
+                      <select value={galleryAlbumFilter} onChange={(event) => setGalleryAlbumFilter(event.target.value)}>
+                        <option>All Albums</option>
+                      </select>
+                      <label>
+                        <Search size={16} />
+                        <input value={galleryAlbumSearch} placeholder="Search albums..." onChange={(event) => setGalleryAlbumSearch(event.target.value)} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="gallery-album-card-grid">
+                    {filteredGalleryAlbums.map((album) => (
+                      <article className="gallery-album-admin-card" key={album.title}>
+                        <div className="gallery-album-cover">
+                          {album.cover ? <img src={album.cover} alt="" /> : <Image size={32} />}
+                          <span>{album.photos.length}</span>
+                          <button type="button" aria-label="More album actions">
+                            <MoreVertical size={18} />
+                          </button>
+                        </div>
+                        <div className="gallery-album-body">
+                          <h3>{album.title}</h3>
+                          <span>{album.photos.length} images</span>
+                          <div className="gallery-album-strip">
+                            {album.photos.slice(0, 3).map((photo) => (
+                              <img key={photo.url} src={photo.url} alt="" />
+                            ))}
+                          </div>
+                          <div className="gallery-album-actions">
+                            <button type="button" onClick={() => setSelectedGalleryAlbumTitle(album.title)}>
+                              <Settings size={15} />
+                              Manage
+                            </button>
+                            <button className="danger" type="button" aria-label={`Delete ${album.title}`} onClick={() => handleDeleteGalleryAlbum(album)}>
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                    <button className="gallery-add-album-card" type="button" onClick={handleAddGalleryAlbum}>
+                      <span><Plus size={28} /></span>
+                      <strong>Add New Album</strong>
+                      <small>Create a new album to organize your images</small>
+                    </button>
+                  </div>
+                  <span className="gallery-result-count">Showing 1 to {filteredGalleryAlbums.length} of {galleryDraftAlbums.length} albums</span>
+                </section>
+                {galleryStatus ? <p className="admin-status-text">{galleryStatus}</p> : null}
+              </>
+            )}
+          </div>
         ) : null}
 
         {activeSection === 'staff' ? (
@@ -1392,6 +1855,7 @@ export function AdminDashboard({
                     <tr>
                       <th>Service</th>
                       <th>Category</th>
+                      <th>Sub Category</th>
                       <th>Price</th>
                       <th>Type</th>
                       <th>Status</th>
@@ -1408,11 +1872,12 @@ export function AdminDashboard({
                               <img src={service.image} alt="" />
                               <span>
                                 <strong>{service.title}</strong>
-                                <small>{service.category}</small>
+                                <small>{service.subCategory || 'No sub category'}</small>
                               </span>
                             </span>
                           </td>
                           <td>{service.category}</td>
+                          <td>{service.subCategory || 'No sub category'}</td>
                           <td>{service.price}</td>
                           <td>{service.serviceType}</td>
                           <td><span className={service.isActive ? 'status-pill' : 'status-pill used'}>{service.isActive ? 'Active' : 'Inactive'}</span></td>
@@ -1429,7 +1894,7 @@ export function AdminDashboard({
                         </tr>
                       );
                     }) : (
-                      <tr><td colSpan={6}>No services match your filters.</td></tr>
+                      <tr><td colSpan={7}>No services match your filters.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1523,6 +1988,7 @@ export function AdminDashboard({
             </button>
             <p>Service Management</p>
             <h2>{editingServiceIndex === services.length ? 'Add Service' : 'Edit Service'}</h2>
+            {serviceSaveStatus ? <p className="admin-status-text error">{serviceSaveStatus}</p> : null}
             <div className="service-editor-grid">
               <div className="service-editor-main">
                 <AdminField label="Service Name">
@@ -1531,6 +1997,9 @@ export function AdminDashboard({
                 <div className="service-price-grid">
                   <AdminField label="Category">
                     <select value={serviceDraft.category} onChange={(event) => handleServiceCategoryChange(event.target.value)}>
+                      {!serviceCategories.some((category) => category.name === serviceDraft.category) ? (
+                        <option>{serviceDraft.category || 'Select category'}</option>
+                      ) : null}
                       {serviceCategories.map((category) => (
                         <option key={category.name}>{category.name}</option>
                       ))}
@@ -1539,6 +2008,9 @@ export function AdminDashboard({
                   <AdminField label="Sub Category">
                     <select value={serviceDraft.subCategory ?? ''} onChange={(event) => updateServiceDraft({ subCategory: event.target.value })}>
                       <option value="">No sub category</option>
+                      {serviceDraft.subCategory && !selectedServiceSubCategories.some((subCategory) => subCategory.name === serviceDraft.subCategory) ? (
+                        <option>{serviceDraft.subCategory}</option>
+                      ) : null}
                       {selectedServiceSubCategories.map((subCategory) => (
                         <option key={subCategory.name}>{subCategory.name}</option>
                       ))}
@@ -1562,15 +2034,15 @@ export function AdminDashboard({
                 {serviceDraft.serviceType === 'Price Range' ? (
                   <div className="service-price-grid">
                     <AdminField label="Minimum Price (₹)">
-                      <input min="0" type="number" value={serviceDraft.minPrice ?? 0} onChange={(event) => updateServiceDraft({ minPrice: Number(event.target.value) })} />
+                      <input min="0" type="number" value={serviceDraft.minPrice || ''} onChange={(event) => updateServicePriceDraft('minPrice', event.target.value)} />
                     </AdminField>
                     <AdminField label="Maximum Price (₹)">
-                      <input min="0" type="number" value={serviceDraft.maxPrice ?? 0} onChange={(event) => updateServiceDraft({ maxPrice: Number(event.target.value) })} />
+                      <input min="0" type="number" value={serviceDraft.maxPrice || ''} onChange={(event) => updateServicePriceDraft('maxPrice', event.target.value)} />
                     </AdminField>
                   </div>
                 ) : serviceDraft.serviceType === 'Fixed Price' ? (
                   <AdminField label="Price (₹)">
-                    <input min="0" type="number" value={serviceDraft.fixedPrice ?? 0} onChange={(event) => updateServiceDraft({ fixedPrice: Number(event.target.value) })} />
+                    <input min="0" type="number" value={serviceDraft.fixedPrice || ''} onChange={(event) => updateServicePriceDraft('fixedPrice', event.target.value)} />
                   </AdminField>
                 ) : null}
                 <AdminField label="Short Description">
@@ -1582,10 +2054,12 @@ export function AdminDashboard({
                 </label>
               </div>
               <div className="service-editor-side">
-                <AdminField label="Service Image URL">
-                  <input value={serviceDraft.image} onChange={(event) => updateServiceDraft({ image: event.target.value })} />
-                </AdminField>
                 <img src={serviceDraft.image} alt="" />
+                <label className="service-image-upload">
+                  <ImagePlus size={18} />
+                  Upload image
+                  <input accept="image/*" type="file" onChange={handleServiceImageUpload} />
+                </label>
                 <AdminField label="Display Order">
                   <input min="0" type="number" value={serviceDraft.displayOrder ?? 0} onChange={(event) => updateServiceDraft({ displayOrder: Number(event.target.value) })} />
                 </AdminField>
@@ -1607,7 +2081,7 @@ export function AdminDashboard({
         <div className="modal-backdrop admin-modal-backdrop" role="presentation">
           <div className="admin-modal category-admin-modal" role="dialog" aria-modal="true" aria-label="Manage service categories">
             <button className="modal-close" type="button" onClick={() => setIsCategoryModalOpen(false)} aria-label="Close categories modal">
-              x
+              <X size={20} />
             </button>
             <div className="category-modal-header">
               <p>Service Category</p>
@@ -1671,7 +2145,7 @@ export function AdminDashboard({
                         }}
                       >
                         <GripVertical size={16} />
-                        <span className="category-icon-tile">{getCategoryIcon(category.name)}</span>
+                        <span className="category-icon-tile" style={{ backgroundColor: category.backgroundColor || undefined }}>{getCategoryIcon(category.name, category.iconKey)}</span>
                         <span className="category-card-copy">
                           <input
                             aria-label={`${category.name || 'Category'} name`}
@@ -1681,8 +2155,38 @@ export function AdminDashboard({
                           />
                           <small>{category.subCategories.length} sub categor{category.subCategories.length === 1 ? 'y' : 'ies'} configured</small>
                         </span>
-                        <span className="category-count-badge">{category.subCategories.length}</span>
-                        <span className="category-card-label">Sub categories</span>
+                        <div className="category-style-controls" onClick={(event) => event.stopPropagation()}>
+                          <label>
+                            Icon
+                            <select value={category.iconKey ?? ''} onChange={(event) => updateCategoryDetails(index, { iconKey: event.target.value })}>
+                              <option value="">Auto</option>
+                              {Object.entries(serviceCategoryIcons).map(([key, icon]) => (
+                                <option key={key} value={key}>{icon.label}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Bg Color
+                            <span className="category-color-control">
+                              <input type="color" value={category.backgroundColor || '#0b4b3a'} onChange={(event) => updateCategoryDetails(index, { backgroundColor: event.target.value })} />
+                              <ChevronDown size={14} />
+                            </span>
+                          </label>
+                          <label>
+                            Image
+                            <span className="category-image-preview">
+                              {category.imageUrl ? <img src={category.imageUrl} alt={`${category.name || 'Category'} preview`} /> : <Image size={20} />}
+                              <span className="category-image-edit" aria-hidden="true">
+                                <Pencil size={13} />
+                              </span>
+                              <input accept="image/*" type="file" onChange={(event) => void handleCategoryImageUpload(index, event)} />
+                            </span>
+                          </label>
+                        </div>
+                        <span className="category-sub-count">
+                          <span>Sub Categories</span>
+                          <strong>{category.subCategories.length}</strong>
+                        </span>
                         <button
                           className="outline-admin-button category-manage-button"
                           type="button"
@@ -1692,6 +2196,7 @@ export function AdminDashboard({
                             setCategoryModalTab('sub-categories');
                           }}
                         >
+                          <Settings size={14} />
                           Manage
                         </button>
                         <button
@@ -1705,7 +2210,6 @@ export function AdminDashboard({
                         >
                           <Trash2 size={15} />
                         </button>
-                        <MoreVertical size={16} />
                       </div>
                     )) : (
                       <div className="empty-admin-state">
@@ -1737,7 +2241,7 @@ export function AdminDashboard({
                         type="button"
                         onClick={() => setSelectedCategoryIndex(index)}
                       >
-                        <span className="category-icon-tile">{getCategoryIcon(category.name)}</span>
+                        <span className="category-icon-tile" style={{ backgroundColor: category.backgroundColor || undefined }}>{getCategoryIcon(category.name, category.iconKey)}</span>
                         <span>
                           <strong>{category.name || 'Untitled Category'}</strong>
                           <small>{category.subCategories.length} sub categor{category.subCategories.length === 1 ? 'y' : 'ies'}</small>
@@ -1923,6 +2427,7 @@ export function AdminDashboard({
 const adminMenuItems: { id: AdminSection; label: string; icon: ReactNode }[] = [
   { id: 'home-page', label: 'Home page', icon: <Home size={18} /> },
   { id: 'customers', label: 'Manage Customers', icon: <Mail size={18} /> },
+  { id: 'gallery', label: 'Manage Gallery', icon: <Image size={18} /> },
   { id: 'services', label: 'Manage Service', icon: <Sparkles size={18} /> },
   { id: 'vouchers', label: 'Voucher Management', icon: <Gift size={18} /> },
 ];
@@ -1930,7 +2435,10 @@ const adminMenuItems: { id: AdminSection; label: string; icon: ReactNode }[] = [
 function findServiceIndex(services: Service[], serviceToFind: Service) {
   return services.findIndex((service) => {
     if (service.id && serviceToFind.id) return service.id === serviceToFind.id;
-    return service.title === serviceToFind.title && service.image === serviceToFind.image;
+    return service.title === serviceToFind.title
+      && service.category === serviceToFind.category
+      && service.subCategory === serviceToFind.subCategory
+      && service.image === serviceToFind.image;
   });
 }
 

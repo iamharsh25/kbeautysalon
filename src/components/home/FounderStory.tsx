@@ -1,28 +1,26 @@
-import { Sparkles } from 'lucide-react';
-import { SectionHeading } from './SectionHeading';
+import { Instagram } from 'lucide-react';
 
-export function FounderStory() {
+export function FounderStory({ instagramUrl }: { instagramUrl: string }) {
   return (
     <section className="story-section" id="about-us">
       <div className="story-copy">
-        <SectionHeading eyebrow="Founder Story" title="Built from care, skill, and family" />
+        <p className="section-eyebrow">About Us</p>
+        <h2>Simple care, beautifully done</h2>
+        <span className="heading-rule" />
         <p>
-          K Beauty Salon began with a simple promise: every client should feel listened to before a
-          service begins and genuinely cared for after they leave. The founder grew up around women
-          who made beauty feel practical, warm, and personal, and that feeling became the heart of
-          the salon.
+          At K Beauty Salon, we believe beauty is more than just a look - it's a feeling. Our mission
+          is to help you look and feel your best with services that are tailored to you.
         </p>
         <p>
-          What started as helping friends and family prepare for special days has grown into a calm,
-          welcoming studio for hair, beauty, and nail services. The salon is modern in technique but
-          personal in spirit, designed for clients who want honest advice, tidy results, and a place
-          they can trust.
+          From the moment you walk in, you'll experience warmth, relaxation, and exceptional care.
         </p>
+        <a className="primary-button story-button" href={instagramUrl} target="_blank" rel="noreferrer">
+          <Instagram size={18} />
+          Visit our Instagram
+        </a>
       </div>
-      <div className="belief-panel">
-        <Sparkles size={28} />
-        <h3>What We Believe</h3>
-        <p>Beauty feels best when it is thoughtful, comfortable, and made for real life.</p>
+      <div className="story-visual">
+        <img src="/homepage/salon_1.jpg" alt="" loading="lazy" />
       </div>
     </section>
   );

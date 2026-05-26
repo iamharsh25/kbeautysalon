@@ -1,5 +1,6 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import type { Service } from '../types';
+import { sanitizeStorageFileName } from '../utils/homepageImages';
 
 type ServiceMenuRow = {
   id: string;
@@ -71,7 +72,7 @@ function toPayload(service: Service) {
 
   return {
     name: service.title,
-    slug: slugify(service.title),
+    slug: slugify([service.title, service.category, service.subCategory].filter(Boolean).join('-')),
     category: service.category || 'Hair Style',
     sub_category: service.subCategory || null,
     description: service.description,
@@ -85,6 +86,24 @@ function toPayload(service: Service) {
     display_order: service.displayOrder ?? 0,
     updated_at: new Date().toISOString(),
   };
+}
+
+export async function uploadServiceImage(file: File) {
+  if (!isSupabaseConfigured || !supabase) return URL.createObjectURL(file);
+
+  const storagePath = `services/${Date.now()}-${crypto.randomUUID()}-${sanitizeStorageFileName(file.name) || 'service'}`;
+  const { error: uploadError } = await supabase.storage
+    .from('site-assets')
+    .upload(storagePath, file, {
+      cacheControl: '3600',
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data } = supabase.storage.from('site-assets').getPublicUrl(storagePath);
+  return data.publicUrl;
 }
 
 export function normalizeService(service: Service, fallbackOrder = 0): Service {

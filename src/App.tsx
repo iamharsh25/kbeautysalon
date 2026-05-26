@@ -1,4 +1,5 @@
 import { type CSSProperties, useEffect, useState } from 'react';
+import { LockKeyhole } from 'lucide-react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   demoClientProfile,
@@ -16,6 +17,7 @@ import {
   initialVouchers,
 } from './data/initialData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
+import { LoginModal } from './components/layout/LoginModal';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { BookingPage } from './pages/BookingPage';
 import { ClientDashboard } from './pages/ClientDashboard';
@@ -25,8 +27,9 @@ import { ServicesPage } from './pages/ServicesPage';
 import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
 import { deleteHomePageImage, getHomePageImages, reorderHomePageImages, uploadHomePageImages } from './services/homePageService';
 import { getSalonSettings, updateSalonSettings, uploadSalonLogo } from './services/salonSettingsService';
-import { getServiceCategories, saveServiceCategories } from './services/serviceCategoryService';
-import { createServiceMenuItem, deleteServiceMenuItem, getServiceMenu, updateServiceMenuItem } from './services/serviceMenuService';
+import { getActiveAuthProfile, isLocalSessionWindowValid, signInWithEmail, signOut, verifyMfaCode, type AuthProfile, type MfaFlow } from './services/authService';
+import { getServiceCategories, saveServiceCategories, uploadServiceCategoryImage } from './services/serviceCategoryService';
+import { createServiceMenuItem, deleteServiceMenuItem, getServiceMenu, updateServiceMenuItem, uploadServiceImage } from './services/serviceMenuService';
 import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, Service, ServiceCategory, SiteSettings } from './types';
 
 function albumSlug(album: GalleryAlbum) {
@@ -36,6 +39,10 @@ function albumSlug(album: GalleryAlbum) {
     .replace(/^-+|-+$/g, '');
 }
 
+function getAccountPath(role: string) {
+  return role === 'admin' || role === 'staff' ? '/admin' : '/client';
+}
+
 export function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,7 +50,8 @@ export function App() {
   const [loginError, setLoginError] = useState('');
   const [services, setServices] = useState(() => isSupabaseConfigured ? [] : initialServices);
   const [serviceCategories, setServiceCategories] = useState(() => isSupabaseConfigured ? [] : initialServiceCategories);
-  const [galleryImages, setGalleryImages] = useState(initialGalleryImages);
+  const [albums, setAlbums] = useState(galleryAlbums);
+  const [, setGalleryImages] = useState(initialGalleryImages);
   const [bookings, setBookings] = useState(initialBookings);
   const [customers, setCustomers] = useState(() => isSupabaseConfigured ? [] : initialCustomers);
   const [reviews, setReviews] = useState(initialReviews);
@@ -53,6 +61,9 @@ export function App() {
   const [homePageImages, setHomePageImages] = useState(initialHomePageImages);
   const [settings, setSettings] = useState(initialSettings);
   const [currentUserFullName, setCurrentUserFullName] = useState('K Beauty Admin');
+  const [currentUserRole, setCurrentUserRole] = useState('');
+  const [pendingAuthProfile, setPendingAuthProfile] = useState<AuthProfile | null>(null);
+  const [mfaFlow, setMfaFlow] = useState<MfaFlow | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -118,17 +129,14 @@ export function App() {
         }
       }
 
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user || !isMounted) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', userData.user.id)
-        .single();
-
-      if (profile?.full_name && isMounted) {
-        setCurrentUserFullName(profile.full_name);
+      try {
+        const profile = await getActiveAuthProfile();
+        if (profile && isMounted) {
+          setCurrentUserFullName(profile.fullName);
+          setCurrentUserRole(profile.role);
+        }
+      } catch (error) {
+        console.error('Active session could not be loaded.', error);
       }
     }
 
@@ -138,6 +146,20 @@ export function App() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    if (!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/client')) return;
+    if (isLocalSessionWindowValid()) return;
+
+    void signOut().finally(() => {
+      setCurrentUserFullName('K Beauty Admin');
+      setCurrentUserRole('');
+      if (location.pathname.startsWith('/client')) {
+        navigate('/');
+      }
+    });
+  }, [location.pathname, navigate]);
 
   async function handleHomePageImageUpload(files: File[]) {
     if (!files.length) return;
@@ -218,13 +240,27 @@ export function App() {
 
   async function handleServiceUpdate(service: Service, index: number) {
     const updatedService = await updateServiceMenuItem(service);
-    setServices((currentServices) => currentServices.map((item, itemIndex) => itemIndex === index ? updatedService : item));
+    setServices((currentServices) => currentServices.map((item, itemIndex) => {
+      if (service.id && item.id) return item.id === service.id ? updatedService : item;
+      return itemIndex === index ? updatedService : item;
+    }));
     return updatedService;
   }
 
   async function handleServiceDelete(service: Service, index: number) {
     await deleteServiceMenuItem(service);
-    setServices((currentServices) => currentServices.filter((_, itemIndex) => itemIndex !== index));
+    setServices((currentServices) => currentServices.filter((item, itemIndex) => {
+      if (service.id && item.id) return item.id !== service.id;
+      return itemIndex !== index;
+    }));
+  }
+
+  async function handleServiceImageUpload(file: File) {
+    return uploadServiceImage(file);
+  }
+
+  async function handleServiceCategoryImageUpload(file: File) {
+    return uploadServiceCategoryImage(file);
   }
 
   async function handleServiceCategoriesSave(categories: ServiceCategory[]) {
@@ -234,47 +270,57 @@ export function App() {
   }
 
   async function handleLogin(email: string, password: string) {
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-      if (error || !data.user) {
-        setLoginError('Login failed. Please check your email and password.');
+    try {
+      const { profile, mfa } = await signInWithEmail(email, password);
+      setCurrentUserFullName(profile.fullName);
+      setCurrentUserRole(profile.role);
+      if (mfa) {
+        setPendingAuthProfile(profile);
+        setMfaFlow(mfa);
+        setLoginError('');
         return;
       }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role,full_name')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError || !profile) {
-        setLoginError('Account found, but no profile role is connected yet.');
-        return;
-      }
-
-      setCurrentUserFullName(profile.full_name || data.user.email || 'K Beauty Admin');
-      navigate(profile.role === 'admin' || profile.role === 'staff' ? '/admin' : '/client');
+      navigate(getAccountPath(profile.role));
       setIsLoginOpen(false);
       setLoginError('');
       return;
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Login failed. Please try again.');
     }
+  }
 
-    if (email.toLowerCase() === 'admin@kbeautysalon.com' && password === 'preview123') {
-      setCurrentUserFullName('K Beauty Admin');
-      navigate('/admin');
+  async function handleMfaVerify(code: string) {
+    if (!mfaFlow || !pendingAuthProfile) return;
+
+    try {
+      await verifyMfaCode(mfaFlow, code);
+      setCurrentUserFullName(pendingAuthProfile.fullName);
+      setCurrentUserRole(pendingAuthProfile.role);
+      navigate(getAccountPath(pendingAuthProfile.role));
+      setPendingAuthProfile(null);
+      setMfaFlow(null);
       setIsLoginOpen(false);
       setLoginError('');
-      return;
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Two-factor verification failed.');
     }
-
-    navigate('/client');
-    setIsLoginOpen(false);
-    setLoginError('');
   }
 
   function goHome() {
     navigate('/');
+  }
+
+  function goToAccount() {
+    navigate(getAccountPath(currentUserRole));
+  }
+
+  async function handleLogout() {
+    await signOut();
+    setCurrentUserFullName('K Beauty Admin');
+    setCurrentUserRole('');
+    setPendingAuthProfile(null);
+    setMfaFlow(null);
+    goHome();
   }
 
   const themeStyle = {
@@ -282,6 +328,7 @@ export function App() {
     '--green-dark': settings.themePrimaryColor,
     '--gold': settings.themeAccentColor,
   } as CSSProperties;
+  const isSignedIn = isLocalSessionWindowValid() && Boolean(currentUserRole);
 
   return (
     <div style={themeStyle}>
@@ -290,20 +337,17 @@ export function App() {
           path="/"
           element={
             <HomePage
-              albums={galleryAlbums}
+              albums={albums}
+              currentUserFullName={currentUserFullName}
               homePageImages={homePageImages}
-              isLoginOpen={isLoginOpen}
-              loginError={loginError}
+              isSignedIn={isSignedIn}
+              serviceCategories={serviceCategories}
               services={services}
               settings={settings}
               onAlbumOpen={(album) => navigate(`/gallery/${albumSlug(album)}`)}
-              onBookClick={() => navigate('/booking')}
-              onCloseLogin={() => {
-                setIsLoginOpen(false);
-                setLoginError('');
-              }}
-              onLogin={handleLogin}
+              onAccountClick={goToAccount}
               onLoginClick={() => setIsLoginOpen(true)}
+              onLogout={handleLogout}
               onServicesClick={() => navigate('/services')}
             />
           }
@@ -312,11 +356,15 @@ export function App() {
           path="/services"
           element={
             <ServicesPage
+              currentUserFullName={currentUserFullName}
+              isSignedIn={isSignedIn}
+              onAccountClick={goToAccount}
+              serviceCategories={serviceCategories}
               services={services}
               settings={settings}
               onBack={goHome}
-              onBookClick={() => navigate('/booking')}
               onLoginClick={() => setIsLoginOpen(true)}
+              onLogout={handleLogout}
             />
           }
         />
@@ -325,6 +373,7 @@ export function App() {
           path="/gallery/:album"
           element={
             <GalleryAlbumRoute
+              albums={albums}
               onAlbumChange={(album) => navigate(`/gallery/${albumSlug(album)}`)}
               onBack={goHome}
             />
@@ -334,12 +383,12 @@ export function App() {
           <Route
             key={path}
             path={path}
-            element={
+            element={isSignedIn ? (
               <AdminDashboard
                 adminFullName={currentUserFullName}
                 bookings={bookings}
                 customers={customers}
-                galleryImages={galleryImages}
+                galleryAlbums={albums}
                 homePageImages={homePageImages}
                 reviews={reviews}
                 services={services}
@@ -354,58 +403,109 @@ export function App() {
                 onCustomerVoucherDelete={handleCustomerVoucherDelete}
                 onCustomersChange={setCustomers}
                 onGalleryChange={setGalleryImages}
+                onGalleryAlbumsChange={setAlbums}
                 onHomePageImageDelete={handleHomePageImageDelete}
                 onHomePageImagesReorder={handleHomePageImagesReorder}
                 onHomePageImagesUpload={handleHomePageImageUpload}
                 onLogoUpload={handleLogoUpload}
-                onLogout={goHome}
+                onLogout={handleLogout}
+                onVisitWebsite={goHome}
                 onReviewChange={setReviews}
                 onServiceChange={setServices}
                 onServiceCreate={handleServiceCreate}
                 onServiceDelete={handleServiceDelete}
+                onServiceImageUpload={handleServiceImageUpload}
                 onServiceUpdate={handleServiceUpdate}
                 onServiceCategoriesChange={setServiceCategories}
+                onServiceCategoryImageUpload={handleServiceCategoryImageUpload}
                 onServiceCategoriesSave={handleServiceCategoriesSave}
                 onStaffChange={setStaffMembers}
                 onSettingsChange={handleSettingsChange}
                 onVoucherChange={setVouchers}
               />
-            }
+            ) : (
+              <AdminLoginGate
+                logoUrl={settings.logoUrl}
+                onBackHome={goHome}
+                onLoginClick={() => setIsLoginOpen(true)}
+              />
+            )}
           />
         ))}
         <Route
           path="/client"
-          element={
+          element={isSignedIn ? (
             <ClientDashboard
               bookings={bookings}
               photos={clientPhotos}
               profile={demoClientProfile}
               vouchers={vouchers.filter((voucher) => voucher.status === 'Active')}
-              onLogout={goHome}
+              onLogout={handleLogout}
               onPhotoAdd={(photo) => setClientPhotos([photo, ...clientPhotos])}
             />
-          }
+          ) : <Navigate replace to="/" />}
         />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Routes>
+      {isLoginOpen ? (
+        <LoginModal
+          error={loginError}
+          onClose={() => {
+            setIsLoginOpen(false);
+            setLoginError('');
+            setMfaFlow(null);
+            setPendingAuthProfile(null);
+          }}
+          onLogin={handleLogin}
+          mfaFlow={mfaFlow}
+          onMfaVerify={handleMfaVerify}
+        />
+      ) : null}
     </div>
   );
 }
 
+function AdminLoginGate({
+  logoUrl,
+  onBackHome,
+  onLoginClick,
+}: {
+  logoUrl: string;
+  onBackHome: () => void;
+  onLoginClick: () => void;
+}) {
+  return (
+    <main className="admin-login-gate">
+      <section className="admin-login-card">
+        <img src={logoUrl} alt="" />
+        <span><LockKeyhole size={18} /> Admin Access</span>
+        <h1>K Beauty Salon Admin</h1>
+        <p>Login to manage customers, services, gallery, vouchers, and website settings.</p>
+        <div>
+          <button className="primary-button" type="button" onClick={onLoginClick}>Login</button>
+          <button className="outline-button" type="button" onClick={onBackHome}>View Website</button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function GalleryAlbumRoute({
+  albums,
   onAlbumChange,
   onBack,
 }: {
+  albums: GalleryAlbum[];
   onAlbumChange: (album: GalleryAlbum) => void;
   onBack: () => void;
 }) {
   const params = useParams();
-  const album = galleryAlbums.find((item) => albumSlug(item) === params.album) ?? galleryAlbums[0];
+  const album = albums.find((item) => albumSlug(item) === params.album) ?? albums[0];
 
   return (
     <GalleryAlbumPage
       album={album}
-      albums={galleryAlbums}
+      albums={albums}
       onAlbumChange={onAlbumChange}
       onBack={onBack}
     />
