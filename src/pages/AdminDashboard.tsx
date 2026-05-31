@@ -11,7 +11,7 @@ type ConfirmDialogState = {
   title: string;
   message: string;
   confirmLabel: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
 };
 
 const SERVICES_PER_PAGE = 10;
@@ -35,6 +35,7 @@ export function AdminDashboard({
   onCustomerVoucherDelete,
   onCustomersChange,
   onGalleryAlbumsChange,
+  onGalleryAlbumDelete,
   onGalleryChange,
   onHomePageImageDelete,
   onHomePageImagesReorder,
@@ -72,7 +73,8 @@ export function AdminDashboard({
   onCustomerVoucherAssign: (customerId: string, voucher: CustomerVoucher) => CustomerVoucher | Promise<CustomerVoucher>;
   onCustomerVoucherDelete: (customerId: string, voucherCode: string, voucherIndex: number, voucherAssignmentId?: string) => void | Promise<void>;
   onCustomersChange: (customers: Customer[]) => void;
-  onGalleryAlbumsChange: (albums: GalleryAlbum[]) => void;
+  onGalleryAlbumsChange: (albums: GalleryAlbum[]) => GalleryAlbum[] | Promise<GalleryAlbum[]>;
+  onGalleryAlbumDelete: (album: GalleryAlbum) => void | Promise<void>;
   onGalleryChange: (galleryImages: GalleryImage[]) => void;
   onHomePageImageDelete: (image: HomePageImage) => void | Promise<void>;
   onHomePageImagesReorder: (images: HomePageImage[]) => void | Promise<void>;
@@ -113,6 +115,7 @@ export function AdminDashboard({
   const [galleryImageSearch, setGalleryImageSearch] = useState('');
   const [galleryImageFilter, setGalleryImageFilter] = useState('All Images');
   const [galleryStatus, setGalleryStatus] = useState('');
+  const [isGallerySaving, setIsGallerySaving] = useState(false);
   const [voucherToAssign, setVoucherToAssign] = useState(vouchers.find((voucher) => voucher.status === 'Active')?.code ?? vouchers[0]?.code ?? '');
   const [voucherStartDate, setVoucherStartDate] = useState('2026-05-21');
   const [voucherExpiryDate, setVoucherExpiryDate] = useState('2026-08-21');
@@ -438,9 +441,11 @@ export function AdminDashboard({
   function createGalleryPhoto(file: File): GalleryImage {
     const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || 'Gallery image';
     return {
+      id: `pending-${crypto.randomUUID()}`,
       title,
       alt: title,
       url: URL.createObjectURL(file),
+      pendingFile: file,
     };
   }
 
@@ -525,10 +530,30 @@ export function AdminDashboard({
     setGalleryStatus('Image order changed. Click Save Changes to publish.');
   }
 
-  function handleGallerySave() {
-    onGalleryAlbumsChange(galleryDraftAlbums);
-    onGalleryChange(galleryDraftAlbums.flatMap((album) => album.photos));
-    setGalleryStatus('Gallery changes saved.');
+  async function handleGallerySave() {
+    setIsGallerySaving(true);
+    setGalleryStatus('Saving gallery changes...');
+    try {
+      const savedAlbums = await onGalleryAlbumsChange(galleryDraftAlbums);
+      if (Array.isArray(savedAlbums)) {
+        setGalleryDraftAlbums(savedAlbums);
+        onGalleryChange(savedAlbums.flatMap((album) => album.photos));
+        if (selectedGalleryAlbum) {
+          const savedSelectedAlbum = savedAlbums.find((album) => {
+            if (selectedGalleryAlbum.id && album.id) return album.id === selectedGalleryAlbum.id;
+            return album.title === selectedGalleryAlbum.title;
+          });
+          setSelectedGalleryAlbumTitle(savedSelectedAlbum?.title ?? selectedGalleryAlbum.title);
+        }
+      } else {
+        onGalleryChange(galleryDraftAlbums.flatMap((album) => album.photos));
+      }
+      setGalleryStatus('Gallery changes saved.');
+    } catch (error) {
+      setGalleryStatus(error instanceof Error ? error.message : 'Gallery changes could not be saved.');
+    } finally {
+      setIsGallerySaving(false);
+    }
   }
 
   function handleGalleryCancel() {
@@ -555,13 +580,21 @@ export function AdminDashboard({
       title: 'Delete album?',
       message: `This will remove "${album.title}" and its ${album.photos.length} image${album.photos.length === 1 ? '' : 's'} from the gallery.`,
       confirmLabel: 'Delete Album',
-      onConfirm: () => {
-        const nextAlbums = galleryDraftAlbums.filter((item) => item.title !== album.title);
-        setGalleryDraftAlbums(nextAlbums);
-        onGalleryAlbumsChange(nextAlbums);
-        onGalleryChange(nextAlbums.flatMap((item) => item.photos));
-        setSelectedGalleryAlbumTitle('');
-        setGalleryStatus('Album deleted.');
+      onConfirm: async () => {
+        setGalleryStatus('Deleting album...');
+        try {
+          await onGalleryAlbumDelete(album);
+          const nextAlbums = galleryDraftAlbums.filter((item) => {
+            if (album.id && item.id) return item.id !== album.id;
+            return item.title !== album.title;
+          });
+          setGalleryDraftAlbums(nextAlbums);
+          onGalleryChange(nextAlbums.flatMap((item) => item.photos));
+          setSelectedGalleryAlbumTitle('');
+          setGalleryStatus('Album deleted.');
+        } catch (error) {
+          setGalleryStatus(error instanceof Error ? error.message : 'Album could not be deleted.');
+        }
       },
     });
   }
@@ -1577,10 +1610,10 @@ export function AdminDashboard({
                       </div>
                     </div>
                     <div className="gallery-save-actions">
-                      <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleGalleryCancel}>Cancel</button>
-                      <button className="small-admin-button" type="button" onClick={handleGallerySave}>
+                      <button className="outline-admin-button cancel-admin-button" type="button" onClick={handleGalleryCancel} disabled={isGallerySaving}>Cancel</button>
+                      <button className="small-admin-button" type="button" onClick={handleGallerySave} disabled={isGallerySaving}>
                         <Save size={16} />
-                        Save Changes
+                        {isGallerySaving ? 'Saving...' : 'Save Changes'}
                       </button>
                     </div>
                     {galleryStatus ? <p className="admin-status-text">{galleryStatus}</p> : null}

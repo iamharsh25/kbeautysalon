@@ -27,15 +27,24 @@ export type ServiceCategory = {
 };
 
 export type GalleryImage = {
+  id?: string;
   title: string;
   alt: string;
   url: string;
+  storagePath?: string;
+  displayOrder?: number;
+  isFeatured?: boolean;
+  pendingFile?: File;
 };
 
 export type GalleryAlbum = {
+  id?: string;
   title: string;
+  slug?: string;
   description: string;
   cover: string;
+  displayOrder?: number;
+  isPublic?: boolean;
   headingImageUrls?: string[];
   photos: GalleryImage[];
 };

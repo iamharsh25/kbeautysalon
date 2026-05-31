@@ -25,6 +25,7 @@ import { GalleryAlbumPage } from './pages/GalleryAlbumPage';
 import { HomePage } from './pages/HomePage';
 import { ServicesPage } from './pages/ServicesPage';
 import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
+import { deleteGalleryAlbum, getGalleryAlbums, saveGalleryAlbums } from './services/galleryService';
 import { deleteHomePageImage, getHomePageImages, reorderHomePageImages, uploadHomePageImages } from './services/homePageService';
 import { getSalonSettings, updateSalonSettings, uploadSalonLogo } from './services/salonSettingsService';
 import { getActiveAuthProfile, isLocalSessionWindowValid, signInWithEmail, signOut, verifyMfaCode, type AuthProfile, type MfaFlow } from './services/authService';
@@ -33,6 +34,8 @@ import { createServiceMenuItem, deleteServiceMenuItem, getServiceMenu, updateSer
 import type { Customer, CustomerVoucher, GalleryAlbum, HomePageImage, Service, ServiceCategory, SiteSettings } from './types';
 
 function albumSlug(album: GalleryAlbum) {
+  if (album.slug) return album.slug;
+
   return album.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -50,8 +53,9 @@ export function App() {
   const [loginError, setLoginError] = useState('');
   const [services, setServices] = useState(() => isSupabaseConfigured ? [] : initialServices);
   const [serviceCategories, setServiceCategories] = useState(() => isSupabaseConfigured ? [] : initialServiceCategories);
-  const [albums, setAlbums] = useState(galleryAlbums);
-  const [, setGalleryImages] = useState(initialGalleryImages);
+  const [serviceLoadState, setServiceLoadState] = useState<'loading' | 'ready' | 'error'>(() => isSupabaseConfigured ? 'loading' : 'ready');
+  const [albums, setAlbums] = useState(() => isSupabaseConfigured ? [] : galleryAlbums);
+  const [, setGalleryImages] = useState(() => isSupabaseConfigured ? [] : initialGalleryImages);
   const [bookings, setBookings] = useState(initialBookings);
   const [customers, setCustomers] = useState(() => isSupabaseConfigured ? [] : initialCustomers);
   const [reviews, setReviews] = useState(initialReviews);
@@ -75,68 +79,71 @@ export function App() {
     async function loadInitialSupabaseData() {
       if (!isSupabaseConfigured || !supabase) return;
 
-      try {
-        const homepageImages = await getHomePageImages();
-        if (homepageImages.length && isMounted) {
-          setHomePageImages(homepageImages);
-        }
-      } catch (error) {
-        console.error('Homepage images could not be loaded.', error);
+      const [
+        homepageImagesResult,
+        salonSettingsResult,
+        customersResult,
+        servicesResult,
+        serviceCategoriesResult,
+        galleryAlbumsResult,
+        profileResult,
+      ] = await Promise.allSettled([
+        getHomePageImages(),
+        getSalonSettings(),
+        getCustomers(),
+        getServiceMenu(),
+        getServiceCategories(),
+        getGalleryAlbums(),
+        getActiveAuthProfile(),
+      ]);
+
+      if (!isMounted) return;
+
+      if (homepageImagesResult.status === 'fulfilled' && homepageImagesResult.value.length) {
+        setHomePageImages(homepageImagesResult.value);
+      } else if (homepageImagesResult.status === 'rejected') {
+        console.error('Homepage images could not be loaded.', homepageImagesResult.reason);
       }
 
-      try {
-        const salonSettings = await getSalonSettings();
-        if (salonSettings && isMounted) {
-          setSettings(salonSettings);
-        }
-      } catch (error) {
-        console.error('Salon settings could not be loaded.', error);
+      if (salonSettingsResult.status === 'fulfilled' && salonSettingsResult.value) {
+        setSettings(salonSettingsResult.value);
+      } else if (salonSettingsResult.status === 'rejected') {
+        console.error('Salon settings could not be loaded.', salonSettingsResult.reason);
       }
 
-      try {
-        const databaseCustomers = await getCustomers();
-        if (isMounted) {
-          setCustomers(databaseCustomers);
-        }
-      } catch (error) {
-        console.error('Customers could not be loaded.', error);
-        if (isMounted) {
-          setCustomers([]);
-        }
+      if (customersResult.status === 'fulfilled') {
+        setCustomers(customersResult.value);
+      } else {
+        console.error('Customers could not be loaded.', customersResult.reason);
+        setCustomers([]);
       }
 
-      try {
-        const databaseServices = await getServiceMenu();
-        if (isMounted) {
-          setServices(databaseServices);
-        }
-      } catch (error) {
-        console.error('Services could not be loaded.', error);
-        if (isMounted) {
-          setServices([]);
-        }
+      if (servicesResult.status === 'fulfilled' && serviceCategoriesResult.status === 'fulfilled') {
+        setServices(servicesResult.value);
+        setServiceCategories(serviceCategoriesResult.value);
+        setServiceLoadState('ready');
+      } else {
+        if (servicesResult.status === 'rejected') console.error('Services could not be loaded.', servicesResult.reason);
+        if (serviceCategoriesResult.status === 'rejected') console.error('Service categories could not be loaded.', serviceCategoriesResult.reason);
+        setServices([]);
+        setServiceCategories([]);
+        setServiceLoadState('error');
       }
 
-      try {
-        const databaseServiceCategories = await getServiceCategories();
-        if (isMounted) {
-          setServiceCategories(databaseServiceCategories);
-        }
-      } catch (error) {
-        console.error('Service categories could not be loaded.', error);
-        if (isMounted) {
-          setServiceCategories([]);
-        }
+      if (galleryAlbumsResult.status === 'fulfilled') {
+        setAlbums(galleryAlbumsResult.value);
+        setGalleryImages(galleryAlbumsResult.value.flatMap((album) => album.photos));
+      } else {
+        console.error('Gallery albums could not be loaded.', galleryAlbumsResult.reason);
+        setAlbums([]);
+        setGalleryImages([]);
       }
 
-      try {
-        const profile = await getActiveAuthProfile();
-        if (profile && isMounted) {
-          setCurrentUserFullName(profile.fullName);
-          setCurrentUserRole(profile.role);
-        }
-      } catch (error) {
-        console.error('Active session could not be loaded.', error);
+      if (profileResult.status === 'fulfilled' && profileResult.value) {
+        setCurrentUserFullName(profileResult.value.fullName);
+        setCurrentUserRole(profileResult.value.role);
+      } else if (profileResult.status === 'rejected') {
+        console.error('Active session could not be loaded.', profileResult.reason);
       }
     }
 
@@ -269,6 +276,23 @@ export function App() {
     return savedCategories;
   }
 
+  async function handleGalleryAlbumsSave(nextAlbums: GalleryAlbum[]) {
+    const savedAlbums = await saveGalleryAlbums(nextAlbums);
+    setAlbums(savedAlbums);
+    setGalleryImages(savedAlbums.flatMap((album) => album.photos));
+    return savedAlbums;
+  }
+
+  async function handleGalleryAlbumDelete(album: GalleryAlbum) {
+    await deleteGalleryAlbum(album);
+    const nextAlbums = albums.filter((item) => {
+      if (album.id && item.id) return item.id !== album.id;
+      return item.title !== album.title;
+    });
+    setAlbums(nextAlbums);
+    setGalleryImages(nextAlbums.flatMap((item) => item.photos));
+  }
+
   async function handleLogin(email: string, password: string) {
     try {
       const { profile, mfa } = await signInWithEmail(email, password);
@@ -342,11 +366,11 @@ export function App() {
               homePageImages={homePageImages}
               isSignedIn={isSignedIn}
               serviceCategories={serviceCategories}
+              serviceLoadState={serviceLoadState}
               services={services}
               settings={settings}
               onAlbumOpen={(album) => navigate(`/gallery/${albumSlug(album)}`)}
               onAccountClick={goToAccount}
-              onLoginClick={() => setIsLoginOpen(true)}
               onLogout={handleLogout}
               onServicesClick={() => navigate('/services')}
             />
@@ -360,10 +384,9 @@ export function App() {
               isSignedIn={isSignedIn}
               onAccountClick={goToAccount}
               serviceCategories={serviceCategories}
+              serviceLoadState={serviceLoadState}
               services={services}
               settings={settings}
-              onBack={goHome}
-              onLoginClick={() => setIsLoginOpen(true)}
               onLogout={handleLogout}
             />
           }
@@ -403,7 +426,8 @@ export function App() {
                 onCustomerVoucherDelete={handleCustomerVoucherDelete}
                 onCustomersChange={setCustomers}
                 onGalleryChange={setGalleryImages}
-                onGalleryAlbumsChange={setAlbums}
+                onGalleryAlbumsChange={handleGalleryAlbumsSave}
+                onGalleryAlbumDelete={handleGalleryAlbumDelete}
                 onHomePageImageDelete={handleHomePageImageDelete}
                 onHomePageImagesReorder={handleHomePageImagesReorder}
                 onHomePageImagesUpload={handleHomePageImageUpload}
@@ -501,6 +525,10 @@ function GalleryAlbumRoute({
 }) {
   const params = useParams();
   const album = albums.find((item) => albumSlug(item) === params.album) ?? albums[0];
+
+  if (!album) {
+    return <Navigate replace to="/" />;
+  }
 
   return (
     <GalleryAlbumPage

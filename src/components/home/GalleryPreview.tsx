@@ -10,14 +10,14 @@ export function GalleryPreview({
 }) {
   return (
     <section className="section gallery-section" id="gallery">
-      <div className="section-heading">
+      <div className="section-heading" data-scroll-reveal>
         <p>Our Albums</p>
         <h2>Moments That Define Beauty</h2>
         <span className="heading-rule centered" />
       </div>
       <div className="album-grid">
         {albums.map((album) => (
-          <button className="album-card" key={album.title} type="button" onClick={() => onAlbumOpen(album)}>
+          <button className="album-card" key={album.id ?? album.title} type="button" onClick={() => onAlbumOpen(album)} data-scroll-reveal>
             <img src={album.cover} alt="" loading="lazy" />
             <h3>{album.title}</h3>
             <span>{album.photos.length} Photos</span>

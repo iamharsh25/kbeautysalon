@@ -42,8 +42,8 @@ export function GalleryAlbumPage({
           <nav aria-label="Gallery albums">
             {albums.map((item) => (
               <button
-                className={item.title === album.title ? 'active' : ''}
-                key={item.title}
+                className={(item.id && album.id ? item.id === album.id : item.title === album.title) ? 'active' : ''}
+                key={item.id ?? item.title}
                 type="button"
                 onClick={() => onAlbumChange(item)}
               >

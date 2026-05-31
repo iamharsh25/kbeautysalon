@@ -3,7 +3,7 @@ import { Instagram } from 'lucide-react';
 export function FounderStory({ instagramUrl }: { instagramUrl: string }) {
   return (
     <section className="story-section" id="about-us">
-      <div className="story-copy">
+      <div className="story-copy" data-scroll-reveal>
         <p className="section-eyebrow">About Us</p>
         <h2>Simple care, beautifully done</h2>
         <span className="heading-rule" />
@@ -19,7 +19,7 @@ export function FounderStory({ instagramUrl }: { instagramUrl: string }) {
           Visit our Instagram
         </a>
       </div>
-      <div className="story-visual">
+      <div className="story-visual" data-scroll-reveal>
         <img src="/homepage/salon_1.jpg" alt="" loading="lazy" />
       </div>
     </section>

@@ -1,27 +1,59 @@
 import type { Service, ServiceCategory } from '../../types';
 import { ArrowRight } from 'lucide-react';
-import { getServiceCategoryGroups, getServiceCategoryVisualMeta, type ServiceCategoryGroup } from '../../utils/serviceCatalog';
+import { getServiceCategoryGroups } from '../../utils/serviceCatalog';
 
 export function ServicesPreview({
   onViewAll,
   serviceCategories,
+  serviceLoadState,
   services,
 }: {
   onViewAll: () => void;
   serviceCategories: ServiceCategory[];
+  serviceLoadState: 'loading' | 'ready' | 'error';
   services: Service[];
 }) {
-  const groupsByName = new Map(getServiceCategoryGroups(services, serviceCategories).map((group) => [group.name, group]));
-  const categoryNames = serviceCategories.length
-    ? mergeCategoryNames(serviceCategories.map((category) => category.name))
-    : mergeCategoryNames(Array.from(groupsByName.keys()));
-  const categoryGroups = (categoryNames.length
-    ? categoryNames.map((name, index) => groupsByName.get(name) ?? createCategoryPreview(name, index))
-    : Array.from(groupsByName.values())
-  ).slice(0, 4);
+  const categoryGroups = getServiceCategoryGroups(services, serviceCategories)
+    .filter((group) => group.name.trim() && (group.services.length > 0 || group.subCategories.length > 0))
+    .slice(0, 4);
+
+  if (serviceLoadState === 'loading') {
+    return (
+      <section className="home-service-strip" id="services" aria-label="Service categories" data-scroll-reveal>
+        <div className="section-heading service-strip-heading">
+          <p>Our Services</p>
+          <h2>Premium Services, Just For You</h2>
+          <span className="heading-rule centered" />
+        </div>
+        <div className="service-category-grid">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <article className="service-category-card skeleton-service-card" key={`service-skeleton-${index}`} data-scroll-reveal>
+              <span />
+              <strong />
+              <p />
+              <small />
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (serviceLoadState === 'error') {
+    return (
+      <section className="home-service-strip" id="services" aria-label="Service categories" data-scroll-reveal>
+        <div className="service-load-message">
+          <strong>Services could not load</strong>
+          <span>Please refresh the page or try again shortly.</span>
+        </div>
+      </section>
+    );
+  }
+
+  if (!categoryGroups.length) return null;
 
   return (
-    <section className="home-service-strip" id="services" aria-label="Service categories">
+    <section className="home-service-strip" id="services" aria-label="Service categories" data-scroll-reveal>
       <div className="section-heading service-strip-heading">
         <p>Our Services</p>
         <h2>Premium Services, Just For You</h2>
@@ -29,7 +61,7 @@ export function ServicesPreview({
       </div>
       <div className="service-category-grid">
         {categoryGroups.map((group) => (
-          <article className={`service-category-card ${group.accent}`} key={group.name}>
+          <article className={`service-category-card ${group.accent}`} key={group.name} data-scroll-reveal>
             <div className="service-category-icon" style={{ backgroundColor: group.backgroundColor }}>
               <group.icon size={25} />
             </div>
@@ -44,20 +76,6 @@ export function ServicesPreview({
       </div>
     </section>
   );
-}
-
-function mergeCategoryNames(names: string[]) {
-  const defaultNames = ['Hair Style', 'Make Up', 'Nails', 'Beauty Treatments'];
-  return Array.from(new Set([...names.filter(Boolean), ...defaultNames]));
-}
-
-function createCategoryPreview(name: string, index: number): ServiceCategoryGroup {
-  return {
-    ...getServiceCategoryVisualMeta(name, index),
-    name,
-    services: [],
-    subCategories: [],
-  };
 }
 
 function getCategoryDescription(categoryName: string) {

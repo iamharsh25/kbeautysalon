@@ -7,7 +7,6 @@ export function Header({
   isSignedIn,
   logoUrl,
   onAccountClick,
-  onLoginClick,
   onLogout,
   onServicesClick,
 }: {
@@ -15,7 +14,6 @@ export function Header({
   isSignedIn: boolean;
   logoUrl: string;
   onAccountClick: () => void;
-  onLoginClick: () => void;
   onLogout: () => void;
   onServicesClick?: () => void;
 }) {
@@ -64,9 +62,7 @@ export function Header({
               </div>
             ) : null}
           </div>
-        ) : (
-          <button className="nav-login-button outline" type="button" onClick={onLoginClick}>Login</button>
-        )}
+        ) : null}
       </nav>
 
       <button
@@ -127,18 +123,7 @@ export function Header({
                 Logout
               </button>
             </>
-          ) : (
-            <button
-              className="mobile-login-button"
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-                onLoginClick();
-              }}
-            >
-              Login
-            </button>
-          )}
+          ) : null}
         </nav>
       ) : null}
     </header>
