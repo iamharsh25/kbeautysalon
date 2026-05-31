@@ -22,7 +22,7 @@ export function ContactBand({ settings }: { settings: SiteSettings }) {
           <a href="/#home">Home</a>
           <a href="/#about-us">About Us</a>
           <a href="/services">Services</a>
-          <a href="/#gallery">Gallery</a>
+          <a href="/gallery">Gallery</a>
         </nav>
         <nav aria-label="Footer services">
           <h2>Our Services</h2>

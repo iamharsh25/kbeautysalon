@@ -3,17 +3,21 @@ import { LogOut, Menu, UserRound } from 'lucide-react';
 import { navItems } from '../../data/initialData';
 
 export function Header({
+  activeItem = 'Home',
   currentUserFullName,
   isSignedIn,
   logoUrl,
   onAccountClick,
+  onGalleryClick,
   onLogout,
   onServicesClick,
 }: {
+  activeItem?: string;
   currentUserFullName?: string;
   isSignedIn: boolean;
   logoUrl: string;
   onAccountClick: () => void;
+  onGalleryClick?: () => void;
   onLogout: () => void;
   onServicesClick?: () => void;
 }) {
@@ -36,9 +40,11 @@ export function Header({
       <nav className="desktop-nav" aria-label="Main navigation">
         {navItems.map((item) => (
           item === 'Services' && onServicesClick ? (
-            <button key={item} type="button" onClick={onServicesClick}>{item}</button>
+            <button className={activeItem === item ? 'active' : ''} key={item} type="button" onClick={onServicesClick}>{item}</button>
+          ) : item === 'Gallery' && onGalleryClick ? (
+            <button className={activeItem === item ? 'active' : ''} key={item} type="button" onClick={onGalleryClick}>{item}</button>
           ) : (
-            <a key={item} href={getSectionHref(item)}>
+            <a className={activeItem === item ? 'active' : ''} key={item} href={getSectionHref(item)}>
               {item}
             </a>
           )
@@ -86,6 +92,18 @@ export function Header({
                 onClick={() => {
                   setIsMenuOpen(false);
                   onServicesClick();
+                }}
+              >
+                {item}
+              </button>
+            ) : item === 'Gallery' && onGalleryClick ? (
+              <button
+                className="mobile-nav-link"
+                key={item}
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onGalleryClick();
                 }}
               >
                 {item}

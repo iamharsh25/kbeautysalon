@@ -1,6 +1,6 @@
 import type { Booking, ClientPhoto, ClientProfile, Customer, GalleryAlbum, GalleryImage, HomePageImage, Lead, Review, Service, ServiceCategory, SiteSettings, StaffMember, Voucher } from '../types';
 
-export const navItems = ['Home', 'About Us', 'Services', 'Gallery', 'Contact Us'];
+export const navItems = ['Home', 'About Us', 'Services', 'Gallery'];
 
 export const initialServices: Service[] = [
   {

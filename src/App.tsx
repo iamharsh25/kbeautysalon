@@ -21,7 +21,7 @@ import { LoginModal } from './components/layout/LoginModal';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { BookingPage } from './pages/BookingPage';
 import { ClientDashboard } from './pages/ClientDashboard';
-import { GalleryAlbumPage } from './pages/GalleryAlbumPage';
+import { GalleryPage } from './pages/GalleryPage';
 import { HomePage } from './pages/HomePage';
 import { ServicesPage } from './pages/ServicesPage';
 import { assignCustomerVoucher, createCustomer, deleteCustomerVoucher, getCustomers, updateCustomer } from './services/customerService';
@@ -55,6 +55,7 @@ export function App() {
   const [serviceCategories, setServiceCategories] = useState(() => isSupabaseConfigured ? [] : initialServiceCategories);
   const [serviceLoadState, setServiceLoadState] = useState<'loading' | 'ready' | 'error'>(() => isSupabaseConfigured ? 'loading' : 'ready');
   const [albums, setAlbums] = useState(() => isSupabaseConfigured ? [] : galleryAlbums);
+  const [galleryLoadState, setGalleryLoadState] = useState<'loading' | 'ready' | 'error'>(() => isSupabaseConfigured ? 'loading' : 'ready');
   const [, setGalleryImages] = useState(() => isSupabaseConfigured ? [] : initialGalleryImages);
   const [bookings, setBookings] = useState(initialBookings);
   const [customers, setCustomers] = useState(() => isSupabaseConfigured ? [] : initialCustomers);
@@ -133,10 +134,12 @@ export function App() {
       if (galleryAlbumsResult.status === 'fulfilled') {
         setAlbums(galleryAlbumsResult.value);
         setGalleryImages(galleryAlbumsResult.value.flatMap((album) => album.photos));
+        setGalleryLoadState('ready');
       } else {
         console.error('Gallery albums could not be loaded.', galleryAlbumsResult.reason);
         setAlbums([]);
         setGalleryImages([]);
+        setGalleryLoadState('error');
       }
 
       if (profileResult.status === 'fulfilled' && profileResult.value) {
@@ -280,6 +283,7 @@ export function App() {
     const savedAlbums = await saveGalleryAlbums(nextAlbums);
     setAlbums(savedAlbums);
     setGalleryImages(savedAlbums.flatMap((album) => album.photos));
+    setGalleryLoadState('ready');
     return savedAlbums;
   }
 
@@ -291,6 +295,7 @@ export function App() {
     });
     setAlbums(nextAlbums);
     setGalleryImages(nextAlbums.flatMap((item) => item.photos));
+    setGalleryLoadState('ready');
   }
 
   async function handleLogin(email: string, password: string) {
@@ -363,6 +368,7 @@ export function App() {
             <HomePage
               albums={albums}
               currentUserFullName={currentUserFullName}
+              galleryLoadState={galleryLoadState}
               homePageImages={homePageImages}
               isSignedIn={isSignedIn}
               serviceCategories={serviceCategories}
@@ -371,6 +377,7 @@ export function App() {
               settings={settings}
               onAlbumOpen={(album) => navigate(`/gallery/${albumSlug(album)}`)}
               onAccountClick={goToAccount}
+              onGalleryClick={() => navigate('/gallery')}
               onLogout={handleLogout}
               onServicesClick={() => navigate('/services')}
             />
@@ -383,6 +390,7 @@ export function App() {
               currentUserFullName={currentUserFullName}
               isSignedIn={isSignedIn}
               onAccountClick={goToAccount}
+              onGalleryClick={() => navigate('/gallery')}
               serviceCategories={serviceCategories}
               serviceLoadState={serviceLoadState}
               services={services}
@@ -393,12 +401,32 @@ export function App() {
         />
         <Route path="/booking" element={<BookingPage settings={settings} onBack={goHome} />} />
         <Route
+          path="/gallery"
+          element={
+            <GalleryPage
+              albums={albums}
+              currentUserFullName={currentUserFullName}
+              galleryLoadState={galleryLoadState}
+              isSignedIn={isSignedIn}
+              onAccountClick={goToAccount}
+              onLogout={handleLogout}
+              onServicesClick={() => navigate('/services')}
+              settings={settings}
+            />
+          }
+        />
+        <Route
           path="/gallery/:album"
           element={
             <GalleryAlbumRoute
               albums={albums}
-              onAlbumChange={(album) => navigate(`/gallery/${albumSlug(album)}`)}
-              onBack={goHome}
+              currentUserFullName={currentUserFullName}
+              galleryLoadState={galleryLoadState}
+              isSignedIn={isSignedIn}
+              onAccountClick={goToAccount}
+              onLogout={handleLogout}
+              onServicesClick={() => navigate('/services')}
+              settings={settings}
             />
           }
         />
@@ -516,26 +544,41 @@ function AdminLoginGate({
 
 function GalleryAlbumRoute({
   albums,
-  onAlbumChange,
-  onBack,
+  currentUserFullName,
+  galleryLoadState,
+  isSignedIn,
+  onAccountClick,
+  onLogout,
+  onServicesClick,
+  settings,
 }: {
   albums: GalleryAlbum[];
-  onAlbumChange: (album: GalleryAlbum) => void;
-  onBack: () => void;
+  currentUserFullName?: string;
+  galleryLoadState: 'loading' | 'ready' | 'error';
+  isSignedIn: boolean;
+  onAccountClick: () => void;
+  onLogout: () => void;
+  onServicesClick: () => void;
+  settings: SiteSettings;
 }) {
   const params = useParams();
   const album = albums.find((item) => albumSlug(item) === params.album) ?? albums[0];
 
-  if (!album) {
+  if (!album && galleryLoadState !== 'loading') {
     return <Navigate replace to="/" />;
   }
 
   return (
-    <GalleryAlbumPage
-      album={album}
+    <GalleryPage
       albums={albums}
-      onAlbumChange={onAlbumChange}
-      onBack={onBack}
+      currentUserFullName={currentUserFullName}
+      galleryLoadState={galleryLoadState}
+      initialAlbumSlug={album ? album.slug ?? album.id ?? album.title : params.album}
+      isSignedIn={isSignedIn}
+      onAccountClick={onAccountClick}
+      onLogout={onLogout}
+      onServicesClick={onServicesClick}
+      settings={settings}
     />
   );
 }

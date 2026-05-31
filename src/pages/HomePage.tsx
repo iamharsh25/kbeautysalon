@@ -10,6 +10,7 @@ import type { GalleryAlbum, HomePageImage, Service, ServiceCategory, SiteSetting
 type HomePageProps = {
   albums: GalleryAlbum[];
   currentUserFullName?: string;
+  galleryLoadState: 'loading' | 'ready' | 'error';
   homePageImages: HomePageImage[];
   isSignedIn: boolean;
   serviceCategories: ServiceCategory[];
@@ -18,6 +19,7 @@ type HomePageProps = {
   settings: SiteSettings;
   onAlbumOpen: (album: GalleryAlbum) => void;
   onAccountClick: () => void;
+  onGalleryClick: () => void;
   onLogout: () => void;
   onServicesClick: () => void;
 };
@@ -25,10 +27,12 @@ type HomePageProps = {
 export function HomePage({
   albums,
   currentUserFullName,
+  galleryLoadState,
   homePageImages,
   isSignedIn,
   onAlbumOpen,
   onAccountClick,
+  onGalleryClick,
   onLogout,
   onServicesClick,
   serviceCategories,
@@ -64,14 +68,15 @@ export function HomePage({
         isSignedIn={isSignedIn}
         logoUrl={settings.logoUrl}
         onAccountClick={onAccountClick}
+        onGalleryClick={onGalleryClick}
         onLogout={onLogout}
         onServicesClick={onServicesClick}
       />
       <main>
-        <Hero images={homePageImages} onGalleryClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })} onServicesClick={onServicesClick} />
+        <Hero images={homePageImages} onGalleryClick={onGalleryClick} onServicesClick={onServicesClick} />
         <ServicesPreview serviceCategories={serviceCategories} serviceLoadState={serviceLoadState} services={services} onViewAll={onServicesClick} />
         <FounderStory instagramUrl={settings.instagramUrl} />
-        <GalleryPreview albums={albums} onAlbumOpen={onAlbumOpen} />
+        <GalleryPreview albums={albums} galleryLoadState={galleryLoadState} onAlbumOpen={onAlbumOpen} onViewAll={onGalleryClick} />
       </main>
       <ContactBand settings={settings} />
     </>

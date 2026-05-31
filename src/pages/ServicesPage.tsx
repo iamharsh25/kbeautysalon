@@ -12,6 +12,7 @@ export function ServicesPage({
   currentUserFullName,
   isSignedIn,
   onAccountClick,
+  onGalleryClick,
   onLogout,
   serviceCategories,
   serviceLoadState,
@@ -21,6 +22,7 @@ export function ServicesPage({
   currentUserFullName?: string;
   isSignedIn: boolean;
   onAccountClick: () => void;
+  onGalleryClick: () => void;
   onLogout: () => void;
   serviceCategories: ServiceCategory[];
   serviceLoadState: 'loading' | 'ready' | 'error';
@@ -59,10 +61,12 @@ export function ServicesPage({
   return (
     <>
       <Header
+        activeItem="Services"
         currentUserFullName={currentUserFullName}
         isSignedIn={isSignedIn}
         logoUrl={settings.logoUrl}
         onAccountClick={onAccountClick}
+        onGalleryClick={onGalleryClick}
         onLogout={onLogout}
         onServicesClick={() => undefined}
       />
